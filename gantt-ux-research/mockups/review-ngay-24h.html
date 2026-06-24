@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MES Control Tower — Xem theo NGÀY (trục 24 giờ)</title>
+<style>
+  :root{
+    --bg:#f4f6fb;--panel:#fff;--soft:#f7f9fc;--line:#e6eaf2;--line2:#eef1f7;
+    --txt:#1c2536;--dim:#5a6b86;--mut:#93a0b6;
+    --primary:#2563eb;--ok:#1faa61;--warn:#f59017;--bad:#e23b4e;--info:#2f7fe0;
+    --ok-bg:#e6f7ee;--warn-bg:#fff3e0;--bad-bg:#fdeaec;--info-bg:#e8f1fd;
+    --mono:'SF Mono',ui-monospace,Consolas,monospace;--shadow:0 1px 3px rgba(20,40,80,.08);
+    /* dải ca rất nhạt */
+    --ca1:rgba(37,99,235,.035);--ca2:rgba(245,144,23,.05);--ca3:rgba(99,102,241,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:13px}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  .topbar{display:flex;align-items:center;gap:18px;height:56px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:#0f1b30}
+  .brand .logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#2563eb,#4f46e5);display:grid;place-items:center;color:#fff;font-size:14px}
+  .crumb{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:12.5px}.crumb b{color:var(--primary);font-weight:600}.crumb .sep{color:var(--mut)}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+  .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#4f46e5);display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px}
+  .icon-btn{width:36px;height:36px;display:grid;place-items:center;border-radius:9px;color:var(--dim);cursor:pointer}.icon-btn:hover{background:var(--soft)}
+
+  .kpis{display:flex;background:var(--panel);border-bottom:1px solid var(--line);padding:2px 6px}
+  .kpi{flex:1;padding:12px 18px;position:relative}
+  .kpi:not(:last-child)::after{content:'';position:absolute;right:0;top:22%;height:56%;width:1px;background:var(--line2)}
+  .kpi .lbl{font-size:10px;letter-spacing:1.1px;color:var(--mut);text-transform:uppercase;margin-bottom:6px}
+  .kpi .val{font-size:21px;font-weight:700;letter-spacing:-.5px;color:#0f1b30}.kpi .val .unit{font-size:12px;color:var(--mut);font-weight:500}
+  .t-ok{color:var(--ok)}.t-warn{color:var(--warn)}.t-bad{color:var(--bad)}.t-info{color:var(--info)}
+  .kpi.theader{flex:0 0 auto;display:flex;align-items:center}.kpi.theader::after{display:none}
+  .miniprog{height:5px;border-radius:3px;background:var(--line2);margin-top:6px;overflow:hidden}.miniprog>span{display:block;height:100%;background:var(--primary)}
+
+  .wrap{display:grid;grid-template-columns:270px 1fr;height:calc(100vh - 56px - 80px)}
+  .sidebar{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;display:flex;flex-direction:column}
+  .sb-sec{padding:18px}
+  .sb-title{font-size:10.5px;letter-spacing:1.2px;color:var(--mut);text-transform:uppercase;margin-bottom:15px}
+  .health-row{margin-bottom:14px}.health-row .top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px}
+  .health-row .top .pct{font-weight:700;font-family:var(--mono)}
+  .bar{height:7px;border-radius:5px;background:var(--line2);overflow:hidden}.bar>span{display:block;height:100%;border-radius:5px}
+  .legend{font-size:11px;color:var(--dim);line-height:1.9}
+  .legend .k{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:-1px}
+  .aps{margin:auto 18px 18px;background:linear-gradient(135deg,#2563eb,#4f46e5);border:0;color:#fff;font-weight:600;padding:12px;border-radius:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;box-shadow:0 4px 12px rgba(37,99,235,.3)}
+
+  .gantt{display:flex;flex-direction:column;overflow:hidden}
+  .g-toolbar{display:flex;align-items:center;gap:10px;padding:11px 18px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .daynav{display:flex;align-items:center;gap:6px}
+  .daynav button{height:34px;min-width:34px;padding:0 10px;border:1px solid var(--line);background:var(--panel);border-radius:9px;color:var(--dim);font-size:13px;cursor:pointer;font-weight:600}
+  .daynav button:hover{background:var(--soft);color:var(--primary)}
+  .daynav .today{color:#fff;background:var(--primary);border-color:var(--primary)}
+  .daynav input{height:34px;border:1px solid var(--line);border-radius:9px;padding:0 10px;font-size:13px;color:var(--txt);font-family:var(--mono)}
+  .drop{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px 13px;font-size:12px;color:var(--dim);cursor:pointer;box-shadow:var(--shadow)}
+  .shiftnow{margin-left:auto;font-size:12px;color:var(--dim);display:flex;align-items:center;gap:8px}
+  .shiftnow b{color:var(--bad);font-family:var(--mono)}
+
+  .g-scroll{flex:1;overflow:auto;background:var(--panel)}
+  .g-grid{position:relative;min-width:880px}
+  .g-head{display:grid;grid-template-columns:280px 1fr;position:sticky;top:0;z-index:5;background:var(--soft);border-bottom:1px solid var(--line)}
+  .g-head .corner{padding:0 16px;font-size:10px;letter-spacing:1.1px;color:var(--mut);text-transform:uppercase;border-right:1px solid var(--line);display:flex;align-items:center}
+  .g-axiswrap{position:relative}
+  .g-shifts{position:relative;height:18px;border-bottom:1px solid var(--line2)}
+  .g-shifts .sf{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;letter-spacing:.4px;color:var(--mut);text-transform:uppercase}
+  .g-axis{position:relative;height:30px}
+  .g-axis .tick{position:absolute;top:0;height:100%;border-left:1px solid var(--line);padding:7px 0 0 5px;font-size:10.5px;color:var(--dim);font-family:var(--mono)}
+  .g-axis .tick.minor{border-left:1px solid var(--line2)}
+
+  .g-row{display:grid;grid-template-columns:280px 1fr;border-bottom:1px solid var(--line2)}
+  .g-row.group{background:var(--soft)}
+  .g-name{padding:0 16px;display:flex;align-items:center;gap:9px;border-right:1px solid var(--line2);min-width:0}
+  .group{min-height:44px}
+  .group .g-name{font-weight:700;font-size:12.5px;color:#0f1b30;padding:10px 20px}
+  /* hàng máy: cho biết bấm được */
+  .g-name.clickable{cursor:pointer;position:relative;transition:background .12s,box-shadow .12s}
+  .g-name.clickable:hover{background:var(--soft)}
+  .g-name.clickable:hover{box-shadow:inset 3px 0 0 var(--primary)}
+  .g-name.clickable:active{background:var(--line2)}
+  .stage-eff{margin-left:auto;font-size:10px;color:var(--mut);background:var(--panel);border:1px solid var(--line);padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .stage-eff.red{color:var(--bad);border-color:#f0bcc2;background:var(--bad-bg)}
+  .stage-eff.orange{color:var(--warn);border-color:#f6e2bf;background:var(--warn-bg)}
+  .mac{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mac .qty{color:var(--dim);font-family:var(--mono);font-size:11px}
+  .dot{width:9px;height:9px;border-radius:50%;margin-left:auto;flex:0 0 auto}
+  .dot.g{background:var(--ok)}.dot.o{background:var(--warn)}.dot.r{background:var(--bad)}
+
+  .g-lane{position:relative}
+  .g-lane .hr{position:absolute;top:0;bottom:0;border-left:1px solid rgba(0,0,0,.035)}
+  .po{position:absolute;height:52px;border-radius:10px;border:1.5px solid;overflow:hidden;cursor:pointer;box-shadow:var(--shadow);transition:transform .1s}
+  .po:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(20,40,80,.12);z-index:4}
+  .po .fill{position:absolute;left:0;bottom:0;height:4px;border-radius:0 2px 0 0}
+  .po .ct{position:relative;padding:6px 13px;height:100%;display:flex;flex-direction:column;justify-content:center}
+  .po .r1{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:12.5px;gap:6px}
+  .po .r2{font-size:10.5px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+  .po.ok{background:var(--ok-bg);border-color:#9fe0bd;color:#0f6b3f}.po.ok .fill{background:var(--ok)}
+  .po.run{background:var(--info-bg);border-color:#a8cdf3;color:#15539e}.po.run .fill{background:var(--info)}
+  .po.bad{background:var(--bad-bg);border-color:#eeaab2;color:#a31f30}.po.bad .fill{background:var(--bad)}
+  /* dấu tiếp diễn (carry in/out) */
+  .po.cin{border-left-style:dashed;border-top-left-radius:0;border-bottom-left-radius:0}
+  .po.cout{border-right-style:dashed;border-top-right-radius:0;border-bottom-right-radius:0}
+  .carry{position:absolute;top:50%;transform:translateY(-50%);font-size:11px;opacity:.7;font-weight:700}
+  .carry.in{left:2px}.carry.out{right:2px}
+  /* nhãn ngoài + cluster */
+  .po.narrow .ct{opacity:0}.po.narrow{min-width:6px}
+  .po-ext{position:absolute;height:52px;display:flex;align-items:center;gap:7px;font-size:11px;color:var(--txt);white-space:nowrap;pointer-events:none;padding:0 7px;z-index:3}
+  .po-ext b{font-weight:700}.po-ext .pg{font-family:var(--mono);color:var(--dim)}.po-ext .sub{color:var(--mut)}
+  .po-ext .conn{position:absolute;left:-7px;top:50%;width:7px;height:1px;background:var(--line)}
+  .po-ext.left{flex-direction:row-reverse}.po-ext.left .conn{left:auto;right:-7px}
+  .cluster{position:absolute;height:52px;border-radius:10px;border:1.5px solid #a8cdf3;background:var(--info-bg);color:#15539e;padding:0 13px;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:var(--shadow)}
+  .cluster .n{background:var(--info);color:#fff;font-weight:700;border-radius:20px;padding:1px 8px;font-size:11px}
+  .nowline{position:absolute;top:0;bottom:0;width:2px;background:var(--bad);z-index:6}
+  .nowline::before{content:attr(data-lbl);position:absolute;top:-1px;left:4px;background:var(--bad);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:0 4px 4px 0;font-family:var(--mono);white-space:nowrap}
+  #pop{position:fixed;z-index:60;min-width:250px;max-width:310px;background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:0 14px 34px rgba(20,40,80,.20);padding:13px 15px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .12s}
+  #pop.on{opacity:1}
+  #pop h4{font-size:13.5px;margin-bottom:9px;display:flex;justify-content:space-between;gap:10px;color:#0f1b30}
+  #pop .tag{font-size:9.5px;padding:2px 9px;border-radius:20px;font-weight:700}
+  #pop .item{font-size:11.5px;color:var(--dim);margin-bottom:9px;line-height:1.4}
+  #pop .row{display:flex;justify-content:space-between;gap:14px;padding:4px 0;border-top:1px solid var(--line2);color:var(--mut)}
+  #pop .row b{color:var(--txt);font-weight:600;font-family:var(--mono)}
+  #pop .pbar{height:6px;border-radius:4px;background:var(--line2);margin-top:10px;overflow:hidden}#pop .pbar>span{display:block;height:100%}
+  .note{font-size:11px;color:var(--mut);padding:8px 18px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><span class="logo">▦</span> MES Control Tower</div>
+  <div class="crumb">Factory A <span class="sep">›</span> Workshop 1 <span class="sep">›</span> <b id="line">Line</b></div>
+  <div class="top-right"><div class="icon-btn">🔔</div><div class="icon-btn">⚙</div><div class="avatar">JS</div></div>
+</div>
+<div class="kpis" id="kpis"></div>
+
+<div class="wrap">
+  <aside class="sidebar">
+    <div class="sb-sec"><div class="sb-title">▤ Production Health</div><div id="health"></div></div>
+    <div class="sb-sec" style="border-top:1px solid var(--line)"><div class="sb-title">Chú thích</div>
+      <div class="legend">
+        <div><span class="k" style="background:var(--ok)"></span>Đúng tiến độ</div>
+        <div><span class="k" style="background:var(--info)"></span>Đang chạy</div>
+        <div><span class="k" style="background:var(--bad)"></span>Trễ / quá tải</div>
+      </div>
+    </div>
+    <button class="aps">✦ APS Optimizer</button>
+  </aside>
+
+  <section class="gantt">
+    <div class="g-toolbar">
+      <div class="daynav">
+        <button id="prev">‹</button>
+        <input type="date" id="day" value="2025-06-24">
+        <button id="next">›</button>
+        <button class="today" id="today">Hôm nay</button>
+      </div>
+      <div class="drop">▾ All Operations</div>
+      <div class="shiftnow">Hiện tại: <b id="nowlbl">14:30</b></div>
+    </div>
+    <div class="note" id="rangeNote"></div>
+    <div class="g-scroll"><div class="g-grid" id="grid"></div></div>
+  </section>
+</div>
+
+<script>
+const RAW = {"data":[{"id":"S975","text":"1 - Phối trộn","row_type":"stage","parent":0,"start_date":"2025-06-19 16:47:00","duration":264,"open":true,"stage_load":100},{"id":"M975_16699","text":"GC_HV - Phòng hỗ trợ Gia Cát_Hưng Vinh","row_type":"machine","parent":"S975","render":"split","start_date":"2025-06-19 16:47:00","duration":264,"open":true,"actual_qty":1655,"plan_qty":1655,"status":"g"},{"id":"P975_16699_WJH-00011_2025","text":"WJH-00011/2025","row_type":"po","parent":"M975_16699","start_date":"2025-06-19 16:47:00","duration":264,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/013","quantity":300,"expected_finish":"16:47","po_state":"ontrack","material_short":false},{"id":"P975_16699_WJH-00012_2025","text":"WJH-00012/2025","row_type":"po","parent":"M975_16699","start_date":"2025-06-24 00:00:00","duration":16,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/016","quantity":1320,"expected_finish":"16:28","po_state":"ontrack","material_short":false},{"id":"P975_16699_WJH-00013_2025","text":"WJH-00013/2025","row_type":"po","parent":"M975_16699","start_date":"2025-06-25 10:02:00","duration":1,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/016","quantity":35,"expected_finish":"10:02","po_state":"ontrack","material_short":false},{"id":"S976","text":"2 - Lọc Tinh","row_type":"stage","parent":0,"start_date":"2025-06-19 16:47:00","duration":264,"open":true,"stage_load":100},{"id":"M976_16699","text":"GC_HV - Phòng hỗ trợ Gia Cát_Hưng Vinh","row_type":"machine","parent":"S976","render":"split","start_date":"2025-06-19 16:47:00","duration":264,"open":true,"actual_qty":1642,"plan_qty":1642,"status":"g"},{"id":"P976_16699_WJH-00011_2025","text":"WJH-00011/2025","row_type":"po","parent":"M976_16699","start_date":"2025-06-19 16:47:00","duration":264,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/013","quantity":288,"expected_finish":"16:47","po_state":"ontrack","material_short":false},{"id":"P976_16699_WJH-00012_2025","text":"WJH-00012/2025","row_type":"po","parent":"M976_16699","start_date":"2025-06-24 00:00:00","duration":16,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/016","quantity":1319,"expected_finish":"16:28","po_state":"ontrack","material_short":false},{"id":"P976_16699_WJH-00013_2025","text":"WJH-00013/2025","row_type":"po","parent":"M976_16699","start_date":"2025-06-25 10:02:00","duration":1,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/016","quantity":35,"expected_finish":"10:02","po_state":"ontrack","material_short":false},{"id":"S977","text":"3 - Thanh Trùng","row_type":"stage","parent":0,"start_date":"2025-06-19 16:47:00","duration":264,"open":true,"stage_load":100},{"id":"M977_16699","text":"GC_HV - Phòng hỗ trợ Gia Cát_Hưng Vinh","row_type":"machine","parent":"S977","render":"split","start_date":"2025-06-19 16:47:00","duration":264,"open":true,"actual_qty":1633,"plan_qty":1633,"status":"g"},{"id":"P977_16699_WJH-00011_2025","text":"WJH-00011/2025","row_type":"po","parent":"M977_16699","start_date":"2025-06-19 16:47:00","duration":264,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/013","quantity":288,"expected_finish":"16:47","po_state":"ontrack","material_short":false},{"id":"P977_16699_WJH-00012_2025","text":"WJH-00012/2025","row_type":"po","parent":"M977_16699","start_date":"2025-06-24 00:00:00","duration":17,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/016","quantity":1310,"expected_finish":"16:30","po_state":"ontrack","material_short":false},{"id":"P977_16699_WJH-00013_2025","text":"WJH-00013/2025","row_type":"po","parent":"M977_16699","start_date":"2025-06-25 10:02:00","duration":1,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/016","quantity":35,"expected_finish":"10:02","po_state":"ontrack","material_short":false},{"id":"S978","text":"4 - Chiết Rót","row_type":"stage","parent":0,"start_date":"2025-06-19 16:47:00","duration":264,"open":true,"stage_load":100},{"id":"M978_16699","text":"GC_HV - Phòng hỗ trợ Gia Cát_Hưng Vinh","row_type":"machine","parent":"S978","render":"split","start_date":"2025-06-19 16:47:00","duration":264,"open":true,"actual_qty":1612,"plan_qty":1612,"status":"g"},{"id":"P978_16699_WJH-00011_2025","text":"WJH-00011/2025","row_type":"po","parent":"M978_16699","start_date":"2025-06-19 16:47:00","duration":264,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/013","quantity":287,"expected_finish":"16:47","po_state":"ontrack","material_short":false},{"id":"P978_16699_WJH-00012_2025","text":"WJH-00012/2025","row_type":"po","parent":"M978_16699","start_date":"2025-06-24 00:00:00","duration":17,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/016","quantity":1290,"expected_finish":"16:30","po_state":"ontrack","material_short":false},{"id":"P978_16699_WJH-00013_2025","text":"WJH-00013/2025","row_type":"po","parent":"M978_16699","start_date":"2025-06-25 10:02:00","duration":1,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/016","quantity":35,"expected_finish":"10:02","po_state":"ontrack","material_short":false},{"id":"S979","text":"5 - Đóng chai","row_type":"stage","parent":0,"start_date":"2025-06-19 16:47:00","duration":264,"open":true,"stage_load":100},{"id":"M979_16699","text":"GC_HV - Phòng hỗ trợ Gia Cát_Hưng Vinh","row_type":"machine","parent":"S979","render":"split","start_date":"2025-06-19 16:47:00","duration":264,"open":true,"actual_qty":1606,"plan_qty":1606,"status":"g"},{"id":"P979_16699_WJH-00011_2025","text":"WJH-00011/2025","row_type":"po","parent":"M979_16699","start_date":"2025-06-19 16:47:00","duration":264,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/013","quantity":286,"expected_finish":"16:47","po_state":"ontrack","material_short":false},{"id":"P979_16699_WJH-00012_2025","text":"WJH-00012/2025","row_type":"po","parent":"M979_16699","start_date":"2025-06-24 00:00:00","duration":17,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/016","quantity":1285,"expected_finish":"16:31","po_state":"ontrack","material_short":false},{"id":"P979_16699_WJH-00013_2025","text":"WJH-00013/2025","row_type":"po","parent":"M979_16699","start_date":"2025-06-25 10:02:00","duration":1,"progress":1,"item_name":"NM0001 - Nước Mắm Ngọc Huy 40 độ đạm 100ml (GT)","order_number":"SO-2506/016","quantity":35,"expected_finish":"10:02","po_state":"ontrack","material_short":false}],"links":[]};
+
+const D=RAW.data;
+const pd=s=>new Date(s.replace(' ','T'));
+const endOf=r=>new Date(pd(r.start_date).getTime()+r.duration*3600*1000);
+const stages=D.filter(r=>r.row_type==='stage');
+const machines=D.filter(r=>r.row_type==='machine');
+const pos=D.filter(r=>r.row_type==='po');
+const childPOs=mId=>pos.filter(p=>p.parent===mId).sort((a,b)=>pd(a.start_date)-pd(b.start_date));
+const DAYMS=86400000, NARROW_PX=140, MROW=62, PAD=8;
+const NOW_DEMO={h:14,m:30}; // mốc "hiện tại" minh hoạ
+const stateMap={ontrack:{t:'ĐÚNG TIẾN ĐỘ',bg:'var(--ok-bg)',c:'#0f6b3f'},delayed:{t:'TRỄ',bg:'var(--bad-bg)',c:'#a31f30'},running:{t:'ĐANG CHẠY',bg:'var(--info-bg)',c:'#15539e'}};
+const colorOf={ok:'var(--ok)',run:'var(--info)',bad:'var(--bad)'};
+function poClass(p){if(p.po_state==='delayed')return 'bad';if(p.progress>=1)return 'ok';return 'run';}
+function loadColor(v){if(v>90)return{c:'var(--bad)',cls:'red'};if(v>=80)return{c:'var(--warn)',cls:'orange'};return{c:'var(--primary)',cls:''};}
+const pad2=n=>String(n).padStart(2,'0');
+const hm=d=>pad2(d.getHours())+':'+pad2(d.getMinutes());
+
+let dayStart;  // ms 00:00 ngày đang chọn
+
+document.getElementById('line').textContent=machines[0]?.text.split(' - ')[0]||'Line';
+
+/* greedy stacking trong phạm vi ngày */
+function layoutSubrows(list){
+  const rows=[];
+  list.forEach(o=>{ let placed=false;
+    for(const r of rows){ if(o.s>=r.lastEnd){ r.items.push(o); r.lastEnd=o.e; placed=true; break; } }
+    if(!placed) rows.push({items:[o],lastEnd:o.e});
+  });
+  return rows;
+}
+
+function render(){
+  dayStart=pd(document.getElementById('day').value+' 00:00:00').getTime();
+  const dayEnd=dayStart+DAYMS;
+  const xPct=t=>((Math.min(Math.max(t,dayStart),dayEnd)-dayStart)/DAYMS)*100;
+
+  // KPI cho ngày
+  const dayPOs=pos.filter(p=>pd(p.start_date).getTime()<dayEnd && endOf(p).getTime()>dayStart);
+  const orders=[...new Set(dayPOs.map(p=>p.order_number))];
+  const sumPlan=machines.reduce((s,m)=>s+m.plan_qty,0), sumAct=machines.reduce((s,m)=>s+m.actual_qty,0);
+  const running=dayPOs.filter(p=>p.progress<1).length, delayed=dayPOs.filter(p=>p.po_state==='delayed').length;
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi theader" style="flex-basis:150px"><div><div class="lbl">📅 Ngày</div>
+      <div class="val" style="font-size:15px">${new Date(dayStart).toLocaleDateString('vi-VN')}</div></div></div>
+    <div class="kpi"><div class="lbl">Orders trong ngày</div><div class="val num">${orders.length} <span class="t-info">/${running}</span> <span class="t-bad">/${delayed}</span></div></div>
+    <div class="kpi"><div class="lbl">Qty (Plan/Act)</div><div class="val num">${(sumPlan/1000).toFixed(1)}k <span class="unit">/${(sumAct/1000).toFixed(1)}k</span></div><div class="miniprog"><span style="width:${Math.min(100,sumAct/sumPlan*100)}%"></span></div></div>
+    <div class="kpi"><div class="lbl">Yield %</div><div class="val num t-ok">100%</div></div>
+    <div class="kpi"><div class="lbl">OEE %</div><div class="val num t-warn">—</div></div>
+    <div class="kpi"><div class="lbl">SA %</div><div class="val num t-info">100%</div></div>
+    <div class="kpi"><div class="lbl">FCST %</div><div class="val num t-ok">${(sumAct/sumPlan*100).toFixed(1)}%</div></div>`;
+
+  document.getElementById('health').innerHTML=stages.map(s=>{const lc=loadColor(s.stage_load);
+    return `<div class="health-row"><div class="top"><span>${s.text}</span><span class="pct" style="color:${lc.c}">${s.stage_load}%</span></div>
+      <div class="bar"><span style="width:${s.stage_load}%;background:${lc.c}"></span></div></div>`;}).join('');
+
+  // hour ticks + hour gridlines (không chia ca)
+  let ticks='',hrlines='';
+  for(let h=0;h<=24;h+=2){const L=h/24*100; ticks+=`<div class="tick" style="left:${L}%">${pad2(h)}:00</div>`;}
+  for(let h=1;h<24;h++){const L=h/24*100; hrlines+=`<div class="hr" style="left:${L}%"></div>`;}
+
+  let html=`<div class="g-head"><div class="corner">Resource Hierarchy</div>
+    <div class="g-axiswrap"><div class="g-axis">${ticks}</div></div></div>`;
+
+  stages.forEach(s=>{
+    html+=`<div class="g-row group"><div class="g-name">${s.text}<span class="stage-eff">Hiệu suất ${s.stage_load}%</span></div><div class="g-lane">${hrlines}</div></div>`;
+    machines.filter(m=>m.parent===s.id).forEach(m=>{
+      const dot=m.status==='g'?'g':(m.status==='o'?'o':'r');
+      // chỉ lấy PO giao với ngày + clip
+      const items=childPOs(m.id).map(p=>{
+        const st=pd(p.start_date).getTime(), en=endOf(p).getTime();
+        if(st>=dayEnd||en<=dayStart) return null;
+        return {p, s:Math.max(st,dayStart), e:Math.min(en,dayEnd), cin:st<dayStart, cout:en>dayEnd};
+      }).filter(Boolean);
+      let subrows=layoutSubrows(items), cluster=null;
+      if(subrows.length>3){const ov=subrows.slice(2).reduce((a,r)=>a.concat(r.items),[]); subrows=subrows.slice(0,2); cluster=ov;}
+      const nLines=subrows.length+(cluster?1:0);
+      const Hh=Math.max(MROW+PAD, nLines*MROW+PAD);
+      let bars=hrlines;
+      subrows.forEach((r,i)=>{ r.items.forEach(o=>{const p=o.p;
+        const left=xPct(o.s), width=Math.max(2.2,xPct(o.e)-left);
+        const da=`data-code="${p.text}" data-item="${p.item_name}" data-order="${p.order_number}" data-qty="${p.quantity}" data-start="${p.start_date}" data-end="${new Date(endOf(p)).toLocaleString('vi-VN')}" data-finish="${p.expected_finish}" data-prog="${Math.round(p.progress*100)}" data-state="${p.po_state}" data-mat="${p.material_short}" data-cls="${poClass(p)}"`;
+        bars+=`<div class="po ${poClass(p)}" ${da} style="left:${left}%;width:${width}%;top:${i*MROW+PAD}px">
+          <div class="fill" style="width:${Math.round(p.progress*100)}%"></div>
+          <div class="ct"><div class="r1"><span>${p.text}</span><span class="num">${Math.round(p.progress*100)}%</span></div>
+          <div class="r2">${p.item_name} · ${p.order_number} · SL ${p.quantity}</div></div></div>`;
+      });});
+      if(cluster){const cs=Math.min(...cluster.map(o=>o.s)),ce=Math.max(...cluster.map(o=>o.e));
+        const left=xPct(cs),width=Math.max(8,xPct(ce)-left);
+        bars+=`<div class="cluster" style="left:${left}%;width:${width}%;top:${2*MROW+PAD}px"><span>${cluster.length} lệnh cùng giờ</span><span class="n">+${cluster.length}</span></div>`;}
+      html+=`<div class="g-row" style="min-height:${Hh}px"><div class="g-name clickable"><span class="mac">${m.text} <span class="qty">[${m.actual_qty}/${m.plan_qty}]</span></span><span class="dot ${dot}"></span></div><div class="g-lane">${bars}</div></div>`;
+    });
+  });
+  const grid=document.getElementById('grid'); grid.innerHTML=html;
+
+  // now line
+  const nowPct=(NOW_DEMO.h*60+NOW_DEMO.m)/1440*100;
+  const nl=document.createElement('div'); nl.className='nowline';
+  nl.style.left=`calc(280px + (100% - 280px) * ${nowPct/100})`;
+  nl.setAttribute('data-lbl','NOW '+pad2(NOW_DEMO.h)+':'+pad2(NOW_DEMO.m));
+  grid.appendChild(nl);
+
+  relayoutLabels(); bindPop();
+  document.getElementById('rangeNote').textContent=`Xem theo ngày ${new Date(dayStart).toLocaleDateString('vi-VN')} · trục 24 giờ · ${dayPOs.length} lệnh trong ngày · lệnh nhiều ngày được cắt theo ngày (◀ ▶) · PO chồng giờ tự tách dòng.`;
+}
+
+function relayoutLabels(){
+  document.querySelectorAll('.po-ext').forEach(e=>e.remove());
+  document.querySelectorAll('.po').forEach(el=>el.classList.remove('narrow'));
+  document.querySelectorAll('.po').forEach(el=>{
+    const lane=el.closest('.g-lane'), barLeft=el.offsetLeft, barW=el.offsetWidth, laneW=lane.clientWidth, d=el.dataset;
+    if(barW<NARROW_PX){ el.classList.add('narrow');
+      const itemShort=(d.item.split(' - ')[1]||d.item);
+      const lab=document.createElement('div'); lab.className='po-ext'; lab.style.top=el.style.top;
+      lab.innerHTML=`<span class="conn"></span><b>${d.code}</b><span class="pg">${d.prog}%</span><span class="sub">· ${itemShort} · SL ${d.qty}</span>`;
+      lane.appendChild(lab); lab.style.left=(barLeft+barW+7)+'px';
+      requestAnimationFrame(()=>{ if(barLeft+barW+7+lab.offsetWidth>laneW){lab.classList.add('left');lab.style.left='auto';lab.style.right=(laneW-barLeft+7)+'px';} });
+    }
+  });
+}
+
+const pop=document.createElement('div'); pop.id='pop'; document.body.appendChild(pop);
+function showPop(el){const d=el.dataset, st=stateMap[d.state]||stateMap.ontrack;
+  pop.innerHTML=`<h4>${d.code}<span class="tag" style="background:${st.bg};color:${st.c}">${st.t}</span></h4>
+    <div class="item">${d.item}</div>
+    <div class="row"><span>Đơn hàng</span><b>${d.order}</b></div>
+    <div class="row"><span>Sản lượng</span><b>${d.qty}</b></div>
+    <div class="row"><span>Bắt đầu</span><b>${d.start.slice(0,16)}</b></div>
+    <div class="row"><span>Kết thúc</span><b>${d.end}</b></div>
+    <div class="row"><span>Dự kiến xong</span><b>${d.finish}</b></div>
+    ${d.mat==='true'?'<div class="row" style="color:var(--warn)"><span>⚠ Vật tư</span><b style="color:var(--warn)">Thiếu NVL</b></div>':''}
+    <div class="pbar"><span style="width:${d.prog}%;background:${colorOf[d.cls]}"></span></div>`;
+  pop.classList.add('on');}
+function placePop(e){const pad=14;let x=e.clientX+pad,y=e.clientY+pad;const r=pop.getBoundingClientRect();
+  if(x+r.width>innerWidth)x=e.clientX-r.width-pad; if(y+r.height>innerHeight)y=e.clientY-r.height-pad;
+  pop.style.left=x+'px';pop.style.top=y+'px';}
+function bindPop(){document.querySelectorAll('.po').forEach(el=>{
+  el.addEventListener('mouseenter',()=>showPop(el)); el.addEventListener('mousemove',placePop);
+  el.addEventListener('mouseleave',()=>pop.classList.remove('on'));});}
+
+/* day nav */
+function shiftDay(n){const i=document.getElementById('day'); const d=pd(i.value+' 00:00:00'); d.setDate(d.getDate()+n);
+  i.value=d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); render();}
+document.getElementById('prev').onclick=()=>shiftDay(-1);
+document.getElementById('next').onclick=()=>shiftDay(1);
+document.getElementById('today').onclick=()=>{const d=new Date();document.getElementById('day').value=d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());render();};
+document.getElementById('day').onchange=render;
+window.addEventListener('resize',relayoutLabels);
+render();
+</script>
+</body>
+</html>

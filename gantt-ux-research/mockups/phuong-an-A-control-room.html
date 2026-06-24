@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MES Control Tower — Phương án A (Control Room)</title>
+<style>
+  :root{
+    --bg:#0d1320; --panel:#141d2e; --panel-2:#1a2435; --line:#243049;
+    --txt:#e6edf7; --txt-dim:#8da0bd; --txt-mut:#5d6f8e;
+    --accent:#3d8bff; --accent-2:#1f6fe5;
+    --ok:#2fd07f; --warn:#ffae3b; --bad:#ff5a6a; --info:#46b6ff;
+    --ok-bg:rgba(47,208,127,.14); --warn-bg:rgba(255,174,59,.14); --bad-bg:rgba(255,90,106,.14); --info-bg:rgba(70,182,255,.14);
+    --radius:10px; --mono:'SF Mono',ui-monospace,'Cascadia Code',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:13px;-webkit-font-smoothing:antialiased}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  /* ===== Top bar ===== */
+  .topbar{display:flex;align-items:center;gap:18px;height:54px;padding:0 18px;background:linear-gradient(180deg,#16203200,#101827);border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px}
+  .brand .logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--accent),#7b5cff);display:grid;place-items:center;font-size:14px}
+  .crumb{display:flex;align-items:center;gap:8px;color:var(--txt-dim);font-size:12.5px}
+  .crumb b{color:var(--accent);font-weight:600}
+  .crumb .sep{color:var(--txt-mut)}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+  .search{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;color:var(--txt-mut);width:280px;font-size:12.5px}
+  .icon-btn{position:relative;width:34px;height:34px;display:grid;place-items:center;border-radius:8px;color:var(--txt-dim);cursor:pointer}
+  .icon-btn:hover{background:var(--panel-2);color:var(--txt)}
+  .badge-dot{position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--bad)}
+  .user{display:flex;align-items:center;gap:9px;padding:4px 6px;border-radius:8px}
+  .avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#3d8bff,#7b5cff);display:grid;place-items:center;font-weight:700;font-size:12px}
+  .user small{display:block;color:var(--txt-mut);font-size:10.5px}
+
+  /* ===== KPI header ===== */
+  .kpis{display:flex;align-items:stretch;gap:0;background:var(--panel);border-bottom:1px solid var(--line)}
+  .kpi{flex:1;padding:11px 18px;border-right:1px solid var(--line);min-width:0}
+  .kpi .lbl{font-size:10px;letter-spacing:1.2px;color:var(--txt-mut);text-transform:uppercase;margin-bottom:5px;display:flex;gap:6px;align-items:center}
+  .kpi .val{font-size:20px;font-weight:700;letter-spacing:-.5px}
+  .kpi .val .unit{font-size:12px;color:var(--txt-dim);font-weight:500}
+  .kpi .sub{font-size:11px;color:var(--txt-dim);margin-top:2px}
+  .seg{margin-left:auto;display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{background:none;border:0;color:var(--txt-dim);padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer}
+  .seg button.on{background:var(--accent);color:#fff}
+  .pill{display:inline-flex;gap:5px}
+  .pill b{font-weight:700}
+  .t-ok{color:var(--ok)} .t-warn{color:var(--warn)} .t-bad{color:var(--bad)} .t-info{color:var(--info)}
+  .kpi.theader{flex:0 0 auto;display:flex;align-items:center}
+
+  /* ===== Layout ===== */
+  .wrap{display:grid;grid-template-columns:260px 1fr;height:calc(100vh - 54px - 78px)}
+  .sidebar{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;display:flex;flex-direction:column}
+  .sb-sec{padding:16px}
+  .sb-title{font-size:10.5px;letter-spacing:1.3px;color:var(--txt-mut);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+  .health-row{margin-bottom:13px}
+  .health-row .top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px}
+  .health-row .top .pct{font-weight:700;font-family:var(--mono)}
+  .bar{height:6px;border-radius:4px;background:var(--panel-2);overflow:hidden}
+  .bar > span{display:block;height:100%;border-radius:4px}
+  .b-blue>span{background:var(--accent)} .b-warn>span{background:var(--warn)} .b-bad>span{background:var(--bad)}
+  .b-bad .top .pct{color:var(--bad)} .b-warn .top .pct{color:var(--warn)}
+
+  .alert{background:var(--panel-2);border:1px solid var(--line);border-left:3px solid;border-radius:8px;padding:10px 12px;margin-bottom:10px}
+  .alert.bad{border-left-color:var(--bad)} .alert.warn{border-left-color:var(--warn)}
+  .alert .h{display:flex;align-items:center;gap:7px;font-weight:600;font-size:12.5px;margin-bottom:3px}
+  .alert .h .d{width:7px;height:7px;border-radius:50%}
+  .alert.bad .d{background:var(--bad)} .alert.warn .d{background:var(--warn)}
+  .alert p{font-size:11.5px;color:var(--txt-dim);line-height:1.45}
+  .count-badge{margin-left:auto;background:var(--bad);color:#fff;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:20px}
+
+  .aps{margin:auto 16px 16px;background:linear-gradient(135deg,var(--accent),#6f5cff);border:0;color:#fff;font-weight:600;padding:11px;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px}
+
+  /* ===== Gantt ===== */
+  .gantt{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+  .g-toolbar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)}
+  .drop{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:7px 12px;font-size:12px;color:var(--txt-dim);cursor:pointer}
+  .zoom{margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--txt-dim);font-size:12px}
+  .zoom .num{color:var(--txt)}
+
+  .g-scroll{flex:1;overflow:auto;position:relative}
+  .g-grid{min-width:980px;position:relative}
+  /* time header */
+  .g-head{display:grid;grid-template-columns:230px 1fr;position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line)}
+  .g-head .corner{padding:9px 14px;font-size:10px;letter-spacing:1.2px;color:var(--txt-mut);text-transform:uppercase;border-right:1px solid var(--line)}
+  .g-axis{position:relative;height:34px}
+  .g-axis .tick{position:absolute;top:0;height:100%;border-left:1px solid var(--line);padding:9px 0 0 7px;font-size:11px;color:var(--txt-dim);font-family:var(--mono)}
+
+  .g-row{display:grid;grid-template-columns:230px 1fr;border-bottom:1px solid var(--line);min-height:52px}
+  .g-row.group{background:var(--panel);min-height:34px}
+  .g-row.group.warn{background:linear-gradient(90deg,var(--bad-bg),transparent 60%)}
+  .g-name{padding:0 14px;display:flex;align-items:center;gap:9px;border-right:1px solid var(--line)}
+  .group .g-name{font-weight:700;font-size:12.5px}
+  .stage-eff{margin-left:auto;font-size:10px;color:var(--txt-mut);background:var(--panel-2);border:1px solid var(--line);padding:2px 8px;border-radius:20px}
+  .stage-eff.bad{color:var(--bad);border-color:var(--bad)}
+  .mac{font-size:12.5px;font-weight:500}
+  .mac .qty{color:var(--txt-dim);font-family:var(--mono);font-size:11.5px}
+  .chip{font-size:10px;color:var(--txt-mut);background:var(--panel-2);border:1px solid var(--line);padding:1px 7px;border-radius:5px}
+  .dot{width:9px;height:9px;border-radius:50%;margin-left:auto;flex:0 0 auto}
+  .dot.g{background:var(--ok);box-shadow:0 0 7px var(--ok)} .dot.o{background:var(--warn);box-shadow:0 0 7px var(--warn)} .dot.r{background:var(--bad);box-shadow:0 0 7px var(--bad)}
+
+  .g-lane{position:relative}
+  .g-lane .gl{position:absolute;top:0;bottom:0;border-left:1px solid #1b2436}
+  /* PO bar */
+  .po{position:absolute;top:8px;height:36px;border-radius:7px;border:1px solid;overflow:hidden;cursor:pointer;transition:transform .1s}
+  .po:hover{transform:translateY(-1px);filter:brightness(1.08)}
+  .po .fill{position:absolute;left:0;bottom:0;height:4px;opacity:1;border-radius:0 2px 0 0}
+  .po .ct{position:relative;padding:5px 9px;display:flex;flex-direction:column;height:100%;justify-content:center}
+  .po .r1{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:12px}
+  .po .r2{font-size:10.5px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .po.ok{background:var(--ok-bg);border-color:var(--ok);color:#bff5d8} .po.ok .fill{background:var(--ok)}
+  .po.run{background:var(--info-bg);border-color:var(--info);color:#cfeaff} .po.run .fill{background:var(--info)}
+  .po.bad{background:var(--bad-bg);border-color:var(--bad);color:#ffd2d7} .po.bad .fill{background:var(--bad)}
+  .po .warnico{color:var(--warn);margin-left:5px}
+  /* overlap: cluster chip (>=4 lệnh song song) */
+  .cluster{position:absolute;top:8px;height:36px;border-radius:7px;border:1px solid var(--info);background:var(--info-bg);color:#cfeaff;padding:0 12px;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:600;cursor:pointer}
+  .cluster:hover{filter:brightness(1.1)}
+  .cluster .n{background:var(--info);color:#06243b;font-weight:700;border-radius:20px;padding:1px 8px;font-size:11px}
+  .cluster .mut{margin-left:auto;color:var(--txt-mut);font-size:10.5px;font-weight:400}
+  /* current time line */
+  .nowline{position:absolute;top:0;bottom:0;width:2px;background:var(--bad);z-index:6;box-shadow:0 0 10px var(--bad)}
+  .nowline::before{content:'NOW 09:12';position:absolute;top:-26px;left:-26px;background:var(--bad);color:#fff;font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:4px;font-family:var(--mono)}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="brand"><span class="logo">▦</span> MES Control Tower</div>
+  <div class="crumb">Factory A <span class="sep">›</span> Workshop 1 <span class="sep">›</span> <b>Line 02</b></div>
+  <div class="top-right">
+    <div class="search">🔍 Tìm PO, máy, sản phẩm…</div>
+    <div class="icon-btn">🔔<span class="badge-dot"></span></div>
+    <div class="icon-btn">⚙</div>
+    <div class="user"><div class="avatar">JS</div><div>J. Smith<small>Plant Mgr</small></div></div>
+  </div>
+</div>
+
+<!-- KPI HEADER -->
+<div class="kpis">
+  <div class="kpi theader" style="flex-basis:160px">
+    <div><div class="lbl">⏱ Time Horizon</div><div class="val" style="font-size:14px">Aug 24 · 06:00–22:00</div></div>
+  </div>
+  <div class="kpi"><div class="lbl">Orders (T/R/Dly)</div><div class="val num">142 <span class="t-info">/ 38</span> <span class="t-bad">/ 10</span></div></div>
+  <div class="kpi"><div class="lbl">Qty (Plan vs Act)</div><div class="val num">45.2k <span class="unit">/ 48.0k</span></div><div class="bar b-blue" style="margin-top:5px"><span style="width:94%"></span></div></div>
+  <div class="kpi"><div class="lbl">Yield %</div><div class="val num t-ok">98.5%</div></div>
+  <div class="kpi"><div class="lbl">OEE %</div><div class="val num t-warn">84.2%</div></div>
+  <div class="kpi"><div class="lbl">SA %</div><div class="val num t-info">92.4%</div></div>
+  <div class="kpi"><div class="lbl">FCST %</div><div class="val num t-ok">98.5%</div></div>
+  <div class="kpi theader"><div class="seg"><button class="on">GANTT</button><button>HEATMAP</button></div></div>
+</div>
+
+<!-- MAIN -->
+<div class="wrap">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-sec">
+      <div class="sb-title">▤ Production Health</div>
+      <div class="health-row b-blue"><div class="top"><span>Phối trộn</span><span class="pct">65%</span></div><div class="bar b-blue"><span style="width:65%"></span></div></div>
+      <div class="health-row b-bad"><div class="top"><span>Lọc tinh</span><span class="pct">100%</span></div><div class="bar b-bad"><span style="width:100%"></span></div></div>
+      <div class="health-row b-warn"><div class="top"><span>Thanh trùng</span><span class="pct">85%</span></div><div class="bar b-warn"><span style="width:85%"></span></div></div>
+      <div class="health-row b-blue"><div class="top"><span>Ủ chượp</span><span class="pct">40%</span></div><div class="bar b-blue"><span style="width:40%"></span></div></div>
+      <div class="health-row b-blue"><div class="top"><span>Chiết rót</span><span class="pct">75%</span></div><div class="bar b-blue"><span style="width:75%"></span></div></div>
+      <div class="health-row b-blue"><div class="top"><span>Đóng gói</span><span class="pct">50%</span></div><div class="bar b-blue"><span style="width:50%"></span></div></div>
+    </div>
+    <div class="sb-sec" style="border-top:1px solid var(--line)">
+      <div class="sb-title">⚠ Alert Center <span class="count-badge">5</span></div>
+      <div class="alert bad"><div class="h"><span class="d"></span>2 Orders Delayed</div><p>PO240608, PO240612 có nguy cơ trễ giao hàng.</p></div>
+      <div class="alert bad"><div class="h"><span class="d"></span>Capacity Overload</div><p>Lọc tinh P-102 vượt 100% công suất thiết kế.</p></div>
+      <div class="alert warn"><div class="h"><span class="d"></span>Material Shortage</div><p>NVL cho PO240605 tồn kho thấp.</p></div>
+    </div>
+    <button class="aps">✦ APS Optimizer</button>
+  </aside>
+
+  <!-- GANTT -->
+  <section class="gantt">
+    <div class="g-toolbar">
+      <div class="drop">▾ All Operations</div>
+      <div class="drop">▾ All Products</div>
+      <div class="zoom">🔍 Zoom <span class="num">100%</span> · <span>Ngày | Tuần | Tháng</span></div>
+    </div>
+    <div class="g-scroll">
+      <div class="g-grid">
+        <!-- time axis: 06->18, 12h mapped on lane width. ticks every 2h = 8.33%*? use 06,08,10,12,14,16,18 -->
+        <div class="g-head">
+          <div class="corner">Resource Hierarchy</div>
+          <div class="g-axis">
+            <div class="tick" style="left:0%">06:00</div>
+            <div class="tick" style="left:16.6%">08:00</div>
+            <div class="tick" style="left:33.3%">10:00</div>
+            <div class="tick" style="left:50%">12:00</div>
+            <div class="tick" style="left:66.6%">14:00</div>
+            <div class="tick" style="left:83.3%">16:00</div>
+          </div>
+        </div>
+
+        <!-- now line overlay positioned at 09:12 ~ (3.2h/12)=26.6% -->
+        <!-- Stage 10 -->
+        <div class="g-row group"><div class="g-name">10. Phối trộn <span class="stage-eff">Hiệu suất 100%</span></div><div class="g-lane"></div></div>
+        <div class="g-row"><div class="g-name"><span class="mac">MX-01 <span class="qty">[0/0]</span></span><span class="chip">Tổ 1</span><span class="dot o"></span></div><div class="g-lane"></div></div>
+        <div class="g-row"><div class="g-name"><span class="mac">MX-02 <span class="qty">[3000/3000]</span></span><span class="chip">Tổ 2</span><span class="dot g"></span></div>
+          <div class="g-lane">
+            <div class="po ok" style="left:1%;width:30%"><div class="fill" style="width:100%"></div><div class="ct"><div class="r1"><span>PO240601</span><span class="num">100%</span></div><div class="r2">Nước mắm Ngọc Huy 10 độ đạm · 1500</div></div></div>
+            <div class="po ok" style="left:50%;width:30%"><div class="fill" style="width:100%"></div><div class="ct"><div class="r1"><span>PO240602</span><span class="num">100%</span></div><div class="r2">Nước mắm Ngọc Huy 10 độ đạm</div></div></div>
+          </div>
+        </div>
+        <!-- Stage 20 overloaded -->
+        <div class="g-row group warn"><div class="g-name">⚠ 20. Lọc tinh <span class="stage-eff bad">Hiệu suất 70%</span></div><div class="g-lane"></div></div>
+        <!-- Hàng có 2 lệnh song song -> tách 2 dòng con (stacking) -->
+        <div class="g-row" style="min-height:100px"><div class="g-name"><span class="mac">PT-01 <span class="qty">[2678/3000]</span></span><span class="chip">Tổ 1</span><span class="dot r"></span></div>
+          <div class="g-lane">
+            <div class="po bad" style="left:33%;width:32%;top:8px"><div class="fill" style="width:10%"></div><div class="ct"><div class="r1"><span>PO240605</span><span class="num">10%</span></div><div class="r2">Nước mắm Ngọc Huy 30 độ đạm · 3000 · Dự kiến 16:00</div></div></div>
+            <div class="po run" style="left:50%;width:30%;top:54px"><div class="fill" style="width:65%"></div><div class="ct"><div class="r1"><span>PO240607</span><span class="num">65%</span></div><div class="r2">Nước mắm Ngọc Huy 30 độ đạm · 2000 · Dự kiến 17:00</div></div></div>
+          </div>
+        </div>
+        <div class="g-row"><div class="g-name"><span class="mac">PT-02 <span class="qty">[2485/4905]</span></span><span class="chip">Tổ 2</span><span class="dot r"></span></div>
+          <div class="g-lane">
+            <div class="po bad" style="left:1%;width:32%"><div class="fill" style="width:10%"></div><div class="ct"><div class="r1"><span>PO240605 <span class="warnico">⚠</span></span><span class="num">10%</span></div><div class="r2">Nước mắm Ngọc Huy 30 độ đạm · 3000 · Dự kiến 16:00</div></div></div>
+          </div>
+        </div>
+        <!-- Stage 30 -->
+        <div class="g-row group"><div class="g-name">30. Thanh trùng <span class="stage-eff">Hiệu suất 85%</span></div><div class="g-lane"></div></div>
+        <div class="g-row"><div class="g-name"><span class="mac">FL-01 <span class="qty">[210/2100]</span></span><span class="chip">Tổ 1</span><span class="dot g"></span></div>
+          <div class="g-lane">
+            <div class="po run" style="left:17%;width:40%"><div class="fill" style="width:85%"></div><div class="ct"><div class="r1"><span>PO240605</span><span class="num">85%</span></div><div class="r2">Nước mắm Ngọc Huy 30 độ đạm · 3000 · Dự kiến 15:30</div></div></div>
+          </div>
+        </div>
+        <!-- Hàng có >=4 lệnh cùng khung giờ -> gộp cluster +N -->
+        <div class="g-row"><div class="g-name"><span class="mac">FL-02 <span class="qty">[1800/4000]</span></span><span class="chip">Tổ 2</span><span class="dot g"></span></div>
+          <div class="g-lane">
+            <div class="cluster" style="left:33%;width:34%"><span>5 lệnh cùng khung giờ</span><span class="n">+5</span><span class="mut">click để mở</span></div>
+          </div>
+        </div>
+
+        <!-- NOW line (absolute over whole grid, offset for name col 230px + 26.6% of lane) -->
+        <div class="nowline" style="left:calc(230px + (100% - 230px) * 0.266)"></div>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

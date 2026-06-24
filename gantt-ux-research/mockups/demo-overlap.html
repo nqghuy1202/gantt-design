@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo xử lý chồng lấn thời gian — MES Gantt</title>
+<style>
+  :root{
+    --bg:#f4f6fb;--panel:#fff;--soft:#f7f9fc;--line:#e6eaf2;--line2:#eef1f7;
+    --txt:#1c2536;--dim:#5a6b86;--mut:#93a0b6;
+    --ok:#1faa61;--warn:#f59017;--bad:#e23b4e;--info:#2f7fe0;
+    --ok-bg:#e6f7ee;--bad-bg:#fdeaec;--info-bg:#e8f1fd;
+    --mono:'SF Mono',ui-monospace,Consolas,monospace;--shadow:0 1px 3px rgba(20,40,80,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:13px;padding:28px 32px 60px}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  h1{font-size:20px;margin-bottom:4px}
+  .lead{color:var(--dim);margin-bottom:26px;max-width:760px;line-height:1.5}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);margin-bottom:24px;overflow:hidden}
+  .card h2{font-size:14px;padding:14px 18px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:10px}
+  .tag{font-size:10px;font-weight:700;letter-spacing:.5px;padding:3px 9px;border-radius:20px;text-transform:uppercase}
+  .tag.rec{background:var(--ok-bg);color:#0f6b3f}
+  .tag.alt{background:#eef1f7;color:var(--dim)}
+  .pro{font-size:12px;color:var(--dim);padding:10px 18px;border-top:1px solid var(--line2);line-height:1.5}
+  .pro b.g{color:var(--ok)} .pro b.r{color:var(--bad)}
+
+  /* mini gantt */
+  .mini{display:grid;grid-template-columns:150px 1fr}
+  .axis{grid-column:2;position:relative;height:26px;border-bottom:1px solid var(--line2);background:var(--soft)}
+  .axis .t{position:absolute;top:6px;font-size:10.5px;color:var(--mut);font-family:var(--mono);border-left:1px solid var(--line2);padding-left:6px;height:20px}
+  .rowname{display:flex;align-items:center;gap:8px;padding:0 14px;border-right:1px solid var(--line2);font-size:12.5px;font-weight:500}
+  .rowname .qty{color:var(--dim);font-family:var(--mono);font-size:11px}
+  .dot{width:9px;height:9px;border-radius:50%;margin-left:auto}.dot.r{background:var(--bad)}.dot.g{background:var(--ok)}
+  .lane{position:relative;border-bottom:1px solid var(--line2)}
+  .po{position:absolute;border-radius:8px;border:1.5px solid;overflow:hidden;box-shadow:var(--shadow);padding:5px 9px;font-size:11.5px}
+  .po b{display:block;font-weight:700;font-size:12px}
+  .po small{opacity:.85;font-size:10px}
+  .po .fill{position:absolute;left:0;bottom:0;height:4px;border-radius:0 2px 0 0}
+  .po.ok{background:var(--ok-bg);border-color:#9fe0bd;color:#0f6b3f}.po.ok .fill{background:var(--ok)}
+  .po.info{background:var(--info-bg);border-color:#a8cdf3;color:#15539e}.po.info .fill{background:var(--info)}
+  .po.bad{background:var(--bad-bg);border-color:#eeaab2;color:#a31f30}.po.bad .fill{background:var(--bad)}
+  /* conflict hatch */
+  .hatch{position:absolute;z-index:3;border-radius:6px;
+    background:repeating-linear-gradient(45deg,rgba(226,59,78,.16),rgba(226,59,78,.16) 6px,rgba(226,59,78,.04) 6px,rgba(226,59,78,.04) 12px);
+    border:1px dashed var(--bad);pointer-events:none}
+  .conf-pill{position:absolute;z-index:5;top:-9px;background:var(--bad);color:#fff;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:20px;font-family:var(--mono);white-space:nowrap}
+  .cluster{position:absolute;border-radius:8px;border:1.5px solid var(--info);background:var(--info-bg);color:#15539e;padding:5px 10px;font-size:11.5px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow)}
+  .cluster .n{background:var(--info);color:#fff;font-weight:700;border-radius:20px;padding:1px 8px;font-size:11px}
+  .alertbar{margin:0 18px 16px;background:var(--bad-bg);border:1px solid #f0bcc2;border-left:3px solid var(--bad);border-radius:10px;padding:10px 13px;font-size:12px}
+  .alertbar b{color:#a31f30}
+  .note{font-size:11.5px;color:var(--mut);padding:0 18px 14px}
+</style>
+</head>
+<body>
+  <h1>Xử lý chồng lấn thời gian (time-overlap) — 3 phương án</h1>
+  <p class="lead">Tình huống: hàng <b>PT-01</b> có 2 lệnh <b>PO240605</b> (10:00–13:00) và <b>PO240607</b> (11:30–14:30) cùng được đưa vào sản xuất, trùng khoảng <b>11:30–13:00</b>. Đây là <b>trùng hợp lệ</b> (song song), không phải xung đột — bài toán thuần là xếp thanh sao cho đọc đủ, rõ, đẹp. Không tô đỏ, không cảnh báo.</p>
+
+  <!-- PA1 -->
+  <div class="card">
+    <h2><span class="tag alt">PA1</span> Sub-row stacking — tách dòng con</h2>
+    <div class="mini">
+      <div class="axis"><span class="t" style="left:0%">09:00</span><span class="t" style="left:25%">11:00</span><span class="t" style="left:50%">13:00</span><span class="t" style="left:75%">15:00</span></div>
+      <div class="rowname" style="grid-row:span 2;border-bottom:1px solid var(--line2)">PT-01 <span class="qty">[2678/3000]</span><span class="dot r"></span></div>
+      <div class="lane" style="height:50px">
+        <div class="po info" style="left:12%;width:38%;top:7px;height:38px"><b>PO240605</b><small>30 độ đạm · 3000</small><span class="fill" style="width:60%"></span></div>
+      </div>
+      <div class="lane" style="height:50px">
+        <div class="po ok" style="left:31%;width:38%;top:7px;height:38px"><b>PO240607</b><small>30 độ đạm · 2000</small><span class="fill" style="width:90%"></span></div>
+      </div>
+    </div>
+    <div class="pro"><b class="g">Ưu:</b> đọc đủ cả 2 thanh, không che. <b class="r">Nhược:</b> tốn chiều dọc khi nhiều overlap.</div>
+  </div>
+
+  <!-- PA2 -->
+  <div class="card">
+    <h2><span class="tag alt">PA2</span> Cascade offset — đè lệch + z-index</h2>
+    <div class="mini">
+      <div class="axis"><span class="t" style="left:0%">09:00</span><span class="t" style="left:25%">11:00</span><span class="t" style="left:50%">13:00</span><span class="t" style="left:75%">15:00</span></div>
+      <div class="rowname">PT-01 <span class="qty">[2678/3000]</span><span class="dot r"></span></div>
+      <div class="lane" style="height:60px">
+        <div class="po info" style="left:12%;width:38%;top:8px;height:36px;z-index:1"><b>PO240605</b><small>3000</small><span class="fill" style="width:60%"></span></div>
+        <div class="po ok" style="left:31%;width:38%;top:22px;height:36px;z-index:2"><b>PO240607</b><small>2000</small><span class="fill" style="width:90%"></span></div>
+      </div>
+    </div>
+    <div class="pro"><b class="g">Ưu:</b> gọn chiều dọc, mật độ cao. <b class="r">Nhược:</b> thanh dưới bị che một phần, khó khi &gt;2.</div>
+  </div>
+
+  <!-- PA3 -->
+  <div class="card">
+    <h2><span class="tag alt">PA3</span> Cluster + badge "+N"</h2>
+    <div class="mini">
+      <div class="axis"><span class="t" style="left:0%">09:00</span><span class="t" style="left:25%">11:00</span><span class="t" style="left:50%">13:00</span><span class="t" style="left:75%">15:00</span></div>
+      <div class="rowname">PT-01 <span class="qty">[2678/3000]</span><span class="dot r"></span></div>
+      <div class="lane" style="height:54px">
+        <div class="cluster" style="left:12%;width:57%;top:9px;height:36px">4 PO cùng khung giờ <span class="n">+4</span> <span style="margin-left:auto;color:var(--mut);font-size:10px">click để mở</span></div>
+      </div>
+    </div>
+    <div class="pro"><b class="g">Ưu:</b> cực gọn khi rất dày. <b class="r">Nhược:</b> ẩn chi tiết, thêm 1 click; thừa khi chỉ 2 thanh.</div>
+  </div>
+
+  <!-- KHUYẾN NGHỊ -->
+  <div class="card" style="border-color:#9fe0bd">
+    <h2><span class="tag rec">Khuyến nghị</span> Hybrid stacking — Tách dòng (≤3) + Cluster (≥4)</h2>
+    <div class="mini">
+      <div class="axis"><span class="t" style="left:0%">09:00</span><span class="t" style="left:25%">11:00</span><span class="t" style="left:50%">13:00</span><span class="t" style="left:75%">15:00</span></div>
+      <div class="rowname" style="grid-row:span 2;border-bottom:1px solid var(--line2)">PT-01 <span class="qty">[2678/3000]</span><span class="dot g"></span></div>
+      <div class="lane" style="height:50px;background:linear-gradient(90deg,transparent,rgba(47,127,224,.05) 31%,rgba(47,127,224,.05) 50%,transparent 50%)">
+        <div class="po info" style="left:12%;width:38%;top:7px;height:38px"><b>PO240605</b><small>30 độ đạm · 3000</small><span class="fill" style="width:60%"></span></div>
+      </div>
+      <div class="lane" style="height:50px;background:linear-gradient(90deg,transparent,rgba(47,127,224,.05) 31%,rgba(47,127,224,.05) 50%,transparent 50%)">
+        <div class="po ok" style="left:31%;width:38%;top:7px;height:38px"><b>PO240607</b><small>30 độ đạm · 2000</small><span class="fill" style="width:90%"></span></div>
+      </div>
+    </div>
+    <div class="note">Mặc định tách dòng con để đọc đủ mọi lệnh song song; vùng nhiều lệnh chồng có thể tô nền xanh rất nhạt chỉ để gom thị giác (trung tính, không cảnh báo); ≥4 PO thì gộp cluster "+N" click mở. Áp dụng đồng bộ cho cả bản dark (PA-A) và light (PA-B).</div>
+  </div>
+</body>
+</html>

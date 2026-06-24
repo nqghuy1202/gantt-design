@@ -1,0 +1,90 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this project is
+
+This workspace customizes an Oracle APEX region plugin (`apex-plugin-dhtmlx-gantt`) into an
+**MES Control Tower** — a manufacturing-execution Gantt that shows production-order (PO) progress
+by stage → machine within a **single fixed 24-hour day**. It is NOT a generic project Gantt.
+
+The original spec lives in `TÀI LIỆU ĐẶC TẢ TÍNH NĂNG SƠ ĐỒ GANT THEO CÔNG ĐOẠN SẢN XUẤT.docx`
+(the target screen and field meanings). Design research, roadmap, and the data contract are in
+`gantt-ux-research/` (numbered docs 01–08 + `mockups/`).
+
+## Architecture: customize-in-place, dual-mode
+
+The customization is a **fork-in-place** of the existing plugin — keep the internal name
+`COM.GITHUB.OGOBRECHT.DHTMLXGANTT`, keep the dhtmlx vendor files, and add a **"Render Mode"**
+branch so the plugin supports both:
+- **Classic dhtmlx** — the original behavior, untouched.
+- **MES Control Tower** — a custom renderer that *replaces* dhtmlx for this view.
+
+What is reused vs replaced (see `gantt-ux-research/06-custom-tai-cho-tren-plugin.md`):
+- **Reused:** the AJAX PL/SQL function (`dhtmlx_gantt_ajax`, returns a single CLOB), the region/attribute
+  framework, `apexrefresh` binding, page-item submission.
+- **Replaced:** the render layer — vendor `gantt.*` calls swapped for a self-written renderer.
+
+### The renderer (`apex-plugin-dhtmlx-gantt/sources/`)
+
+- `mes-control-tower.js` — module `window.plugin_mesGantt`. Entry point `plugin_mesGantt.init({...})`,
+  called from the plugin's onload PL/SQL. It loads data via `apex.server.plugin(ajaxId, {pageItems}, …)`
+  when `queryDefined`, re-renders on `apexrefresh`, and handles loading/empty/error states.
+- `mes-control-tower.css` — all styles, **scoped under `.mesct`** so they never collide with the APEX theme.
+- `_dev-harness.html` — runs the renderer **outside APEX** against embedded sample JSON (uses
+  `sampleData` + `plugin_mesGantt.setDate()` instead of AJAX). This is the primary way to preview changes.
+
+**Mode:** the plugin runs `ganttOnly: true` — it renders **only the Gantt grid (`.g-scroll`)**. The Header
+KPIs, Production Health sidebar, and the day picker are built separately as native APEX components. The
+selected day comes from a page item (`dateItem`, e.g. `P1_NGAY`); a Dynamic Action refreshes the region
+on change.
+
+### Data contract (`gantt-ux-research/07-data-contract.md`)
+
+Region SQL returns one CLOB of JSON `{ "data": [...], "links": [] }`. Rows are hierarchical via
+`row_type` + `id`/`parent`:
+- `stage` (công đoạn) → `machine` (tổ máy) → `po` (lệnh sản xuất).
+- Time axis is fixed 00:00–24:00 of the selected day; `end = start_date + duration × durationUnit`
+  (`durationUnit` default `"hour"`, configurable). POs outside the day are clipped.
+
+### Key rendering rules (encoded in the renderer, reflect locked UX decisions)
+
+- **Overlapping POs on one machine = legitimate parallel orders, not a conflict.** Stack into sub-rows
+  (greedy first-fit, ≤3); collapse into a `+N` cluster at ≥4. No red/conflict styling.
+- **Short bars degrade in-bar (no floating labels):** ≥150px shows code+%+product; 70–150px shows code+%;
+  20–70px shows only the % (centered); <20px becomes a `marker` chip (status color only). All detail is in
+  the hover popover. The timeline stays truthful to time — only markers get an enforced min-width.
+- Status color lives on the machine-row dot; the stage-efficiency badge stays neutral.
+
+## Commands
+
+The renderer is plain JS/CSS — preview by opening `apex-plugin-dhtmlx-gantt/sources/_dev-harness.html`
+in a browser (no build step needed for the new renderer).
+
+The original plugin uses Grunt (lint the vendor helper, copy/minify to `server/`):
+
+```bash
+cd apex-plugin-dhtmlx-gantt
+npm install
+npx grunt          # default: jshint → copy → uglify
+npx grunt watch    # rebuild on source changes
+```
+
+Note: Grunt's `jshint`/`copy`/`uglify` are wired to the *original* `sources/plugin-dhtmlxgantt-helper.js`,
+not the new MES files. The MES renderer is shipped as-is (no minify pipeline yet).
+
+## Packaging into APEX (current approach: manual paste)
+
+The plugin install SQL (`plugin/apex-5.1.4-…-0.11.0-…sql`) embeds files via `wwv_flow_api.create_plugin_file`
+and references them by `p_plugin.file_prefix`; the render/AJAX PL/SQL lives in `sources/plugin-source.sql`.
+To deploy the MES mode: edit the render PL/SQL (load `mes-control-tower.css/js`, emit a `<div class="mesct">`
+container, call `plugin_mesGantt.init`), upload the two new files as Plugin Files, and set Render Mode = MES.
+A full generated install `.sql` is a later option.
+
+## Working norms for this repo
+
+- Work and preview in `sources/` via the dev harness before touching the plugin install SQL / PL/SQL.
+- UX changes are iterated as standalone HTML mockups in `gantt-ux-research/mockups/` and reviewed in a browser
+  before being folded into the renderer. Preserve the locked UX decisions above unless explicitly changed.
+- This is a Windows environment; the Bash tool maps `/tmp` outside the project — copy files into the project
+  tree before reading generated artifacts with the Read tool.
