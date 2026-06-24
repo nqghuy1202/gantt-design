@@ -25,6 +25,13 @@ What is reused vs replaced (see `gantt-ux-research/06-custom-tai-cho-tren-plugin
   framework, `apexrefresh` binding, page-item submission.
 - **Replaced:** the render layer — vendor `gantt.*` calls swapped for a self-written renderer.
 
+**The branch is implemented** in `dhtmlx_gantt_render` (`sources/plugin-source.sql`): it reads
+`v_render_mode := nvl(p_region.attribute_20,'classic')`. When `'mes'` it loads `mes-control-tower.css/js`,
+emits `<div class="mesct gantt-only">`, calls `plugin_mesGantt.init({...})`, then **`RETURN`s before any
+classic code** — the classic dhtmlx path is otherwise byte-for-byte unchanged. MES attribute slots:
+**20**=Render Mode (`classic`/`mes`), **16**=Date Page Item, **21**=Duration Unit (`hour`/`minute`),
+**22**=Default Date; 16/21/22 are `depending_on` attr 20 = `mes`.
+
 ### The renderer (`apex-plugin-dhtmlx-gantt/sources/`)
 
 - `mes-control-tower.js` — module `window.plugin_mesGantt`. Entry point `plugin_mesGantt.init({...})`,
@@ -33,6 +40,11 @@ What is reused vs replaced (see `gantt-ux-research/06-custom-tai-cho-tren-plugin
 - `mes-control-tower.css` — all styles, **scoped under `.mesct`** so they never collide with the APEX theme.
 - `_dev-harness.html` — runs the renderer **outside APEX** against embedded sample JSON (uses
   `sampleData` + `plugin_mesGantt.setDate()` instead of AJAX). This is the primary way to preview changes.
+- `mock-data-query.sql` — a region SQL that builds the same sample JSON from `DUAL` (no real tables), for
+  testing the MES region inside APEX. Anchored to `TRUNC(SYSDATE)` so it needs no date page item. Two
+  contract traps it encodes: `material_short` must be a JSON **number** (1) not the string `"false"` (the
+  renderer uses truthiness, so `"false"` reads as truthy); and `JSON_ARRAYAGG`/`JSON_OBJECT` use
+  `RETURNING CLOB` to survive the 4000-char limit. Needs Oracle 12.2+ (`ABSENT ON NULL`).
 
 **Mode:** the plugin runs `ganttOnly: true` — it renders **only the Gantt grid (`.g-scroll`)**. The Header
 KPIs, Production Health sidebar, and the day picker are built separately as native APEX components. The
@@ -76,10 +88,21 @@ not the new MES files. The MES renderer is shipped as-is (no minify pipeline yet
 ## Packaging into APEX (current approach: manual paste)
 
 The plugin install SQL (`plugin/apex-5.1.4-…-0.11.0-…sql`) embeds files via `wwv_flow_api.create_plugin_file`
-and references them by `p_plugin.file_prefix`; the render/AJAX PL/SQL lives in `sources/plugin-source.sql`.
-To deploy the MES mode: edit the render PL/SQL (load `mes-control-tower.css/js`, emit a `<div class="mesct">`
-container, call `plugin_mesGantt.init`), upload the two new files as Plugin Files, and set Render Mode = MES.
-A full generated install `.sql` is a later option.
+and references them by `p_plugin.file_prefix`. The render/AJAX PL/SQL lives in `sources/plugin-source.sql`
+**but the install SQL keeps its own copy** inside `p_plsql_code` as a `wwv_flow_string.join` array of
+single-quoted lines (every `'` doubled). **These two copies must be kept in sync by hand** — when you change
+the render PL/SQL, mirror it into that array. The MES attribute definitions also live in the install SQL
+(`create_plugin_attribute` for sequences 20/16/21/22).
+
+To deploy MES mode: import the install SQL, **upload `mes-control-tower.css`/`mes-control-tower.js` as Plugin
+Files** (the `add_library`/`add_file` names must match the filenames exactly — they are NOT base64-embedded
+yet, so a 404 here means `plugin_mesGantt is not defined`), set the region's Render Mode = MES, and point its
+Source at a JSON-returning SQL query (e.g. `sources/mock-data-query.sql`).
+
+Deploy gotchas seen in practice: if a page that *used to* host a Classic dhtmlx region still has page-level
+JS referencing the dhtmlx global (`gantt.templates...`, `gantt.config...`), MES mode does NOT load dhtmlx, so
+that leftover code throws `gantt is not defined` — strip it. `dữ liệu không phải JSON object` means the AJAX
+response did not start with `{` (check the Network response: `no_query_defined`, an `ORA-…`, or no rows).
 
 ## Working norms for this repo
 
