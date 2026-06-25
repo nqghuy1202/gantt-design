@@ -10,7 +10,7 @@ by stage → machine within a **single fixed 24-hour day**. It is NOT a generic 
 
 The original spec lives in `TÀI LIỆU ĐẶC TẢ TÍNH NĂNG SƠ ĐỒ GANT THEO CÔNG ĐOẠN SẢN XUẤT.docx`
 (the target screen and field meanings). Design research, roadmap, and the data contract are in
-`gantt-ux-research/` (numbered docs 01–08 + `mockups/`).
+`gantt-ux-research/` (numbered docs 01–10 + `mockups/`).
 
 ## Architecture: customize-in-place, dual-mode
 
@@ -127,6 +127,21 @@ Region SQL returns one CLOB of JSON `{ "data": [...], "links": [] }`. Rows are h
   `mesgantt_po_click`, Selection = the MES region) reading `this.data.id`. (Classic dhtmlx mode instead
   uses `onTaskDblClick` → event `dhtmlxgantt_task_double_click`.)
 
+### PO detail drawer (the `onPoClick` consumer)
+
+Clicking a PO opens a **right-slide drawer** to view PO status **and record production** (thành phẩm/phế
+phẩm) several times per shift — primary user is a điều độ viên on desktop, keyboard-first. It is **not folded
+into the renderer yet**; it is designed as a standalone mockup. Research + design contract live in
+`gantt-ux-research/`: `09-drawer-ghi-nhan-user-story.md` (personas, friction F1–F9, exceptions E1–E12,
+acceptance criteria AC1–AC10) and `10-drawer-ui-ux-nguyen-tac.md` (UI/UX principles + a11y/ship checklist).
+Current build: `mockups/po-detail-drawer-v2.html` (`po-detail-drawer.html` is the original kept for diffing).
+
+Locked drawer decisions: tabs **"Ghi nhận | Lịch sử"** with a shared at-a-glance header; **E3 over-plan =
+warn + confirm, still save** (over-production is legitimate) while E1 negative / E2 sum-zero are hard-blocked;
+E7 close-while-dirty → AlertDialog; after save, refocus the Thành phẩm field with realtime accumulation. All
+scoped under one `.posd` wrapper with tokens on the wrapper (same APEX-safety convention as the chrome).
+Next step (touches plugin code — ask first): wire `onPoClick` → open drawer, feed real data-contract rows.
+
 ## Commands
 
 The renderer is plain JS/CSS — preview by opening `apex-plugin-dhtmlx-gantt/sources/_dev-harness.html`
@@ -170,3 +185,9 @@ response did not start with `{` (check the Network response: `no_query_defined`,
   before being folded into the renderer. Preserve the locked UX decisions above unless explicitly changed.
 - This is a Windows environment; the Bash tool maps `/tmp` outside the project — copy files into the project
   tree before reading generated artifacts with the Read tool.
+- **UI/UX design uses an installed skill stack** (see numbered research docs for worked examples): `ui-ux-pro-max`
+  (`.claude/skills/ui-ux-pro-max`, Python CLI — picks style/palette/typography via `search.py … --design-system`)
+  to choose the direction; `design-taste-frontend` for anti-slop craft principles; `ui-skills` (`npx ui-skills
+  get <slug>` — `baseline-ui`, `fixing-accessibility`) to audit a finished file. All three skew toward
+  landing-page / Tailwind / React — take the **principles**, not literal classes (mockups are vanilla CSS scoped
+  for APEX), and never let their color/pattern defaults override the locked exception-driven color rule.

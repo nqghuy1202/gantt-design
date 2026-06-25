@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PO Detail Drawer v2 — MES Control Tower</title>
+<style>
+/* =========================================================================
+   Drawer ghi nhận sản xuất — v2 (modern / Soft-UI-Evolution)
+   Design read: product-UI nhập liệu cho điều độ viên desktop — hiện đại, trẻ trung,
+   chuyên nghiệp. Neo navy thương hiệu + accent xanh tươi #2563EB; semantic exception-driven.
+   - Scope dưới .posd ; token trên wrapper (chống vỡ khi dán vào APEX)
+   - Shadow mềm nhiều lớp tint xanh · bo 12/9 (rule: card 12 / control 9) · motion 180-240ms transform/opacity
+   - tabular-nums cho số · focus-visible rõ · màu chỉ bật khi chạm ngưỡng
+   ========================================================================= */
+
+body{margin:0;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;background:#e9eef4;min-height:100vh;
+  -webkit-font-smoothing:antialiased}
+.demo-stage{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px}
+.demo-hint{color:#64748b;font-size:13.5px}
+.demo-bar{cursor:pointer;border:none;color:#fff;border-radius:11px;padding:15px 24px;font-size:15px;font-weight:700;
+  background:linear-gradient(135deg,#2563eb,#1e4fd0);box-shadow:0 8px 24px rgba(37,99,235,.32)}
+.demo-bar:hover{filter:brightness(1.05)} .demo-bar .pct{opacity:.85;font-weight:600;margin-left:8px}
+.demo-bar:active{transform:translateY(1px)}
+
+/* ===================== WRAPPER + TOKENS ===================== */
+.posd{
+  --navy:#13294b; --navy-2:#1f4fb0;
+  --blue:#2563eb; --blue-700:#1b46c2; --blue-soft:#eef3ff; --blue-ring:rgba(37,99,235,.18);
+  --ok:#15a34a; --ok-bg:#e7f7ee; --warn:#d9870a; --warn-bg:#fdf3e1; --bad:#e23744; --bad-bg:#fdecee;
+  --ink:#101a2c; --muted:#5b6675; --label:#5f6b7a;
+  --line:#e7edf4; --line-2:#eff3f8; --surface:#ffffff; --soft:#f6f9fd; --soft-2:#f0f5fb;
+  --r:14px; --r-ctl:10px; --r-pill:999px;
+  --sh-1:0 1px 2px rgba(17,38,74,.05), 0 8px 24px rgba(17,38,74,.06);
+  --sh-2:0 2px 6px rgba(17,38,74,.06), 0 16px 40px rgba(17,38,74,.12);
+  --sh-card:0 1px 2px rgba(17,38,74,.04);
+  --z-backdrop:40; --z-drawer:50; --z-confirm:60;
+  --ease:cubic-bezier(.22,1,.36,1);
+  color:var(--ink);font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;
+}
+.posd *{box-sizing:border-box}
+.posd [hidden]{display:none!important}
+
+.posd-backdrop{position:fixed;inset:0;background:rgba(15,28,48,.42);backdrop-filter:blur(2px);
+  z-index:var(--z-backdrop);opacity:0;pointer-events:none;transition:opacity .22s ease-out}
+.posd-backdrop.on{opacity:1;pointer-events:auto}
+
+.posd-drawer{position:fixed;top:0;right:0;height:100dvh;width:472px;max-width:94vw;background:var(--surface);
+  z-index:var(--z-drawer);display:flex;flex-direction:column;border-radius:22px 0 0 22px;overflow:hidden;
+  box-shadow:var(--sh-2);transform:translateX(102%);transition:transform .28s var(--ease);will-change:transform}
+.posd-drawer.on{transform:translateX(0)}
+
+/* ===================== HEADER ===================== */
+.posd-head{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);color:#fff;
+  padding:20px 22px 18px;position:relative;flex:0 0 auto}
+.posd-head .eyebrow{font-size:11px;letter-spacing:.10em;text-transform:uppercase;color:#aebfdd;font-weight:600;margin-bottom:7px}
+.posd-head .titlerow{display:flex;align-items:center;gap:10px;padding-right:40px}
+.posd-head h2{margin:0;font-size:20px;font-weight:750;line-height:1.22;letter-spacing:-.01em}
+.posd-chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.3px;
+  padding:5px 11px 5px 9px;border-radius:var(--r-pill);white-space:nowrap;background:rgba(255,255,255,.16);color:#fff}
+.posd-chip .dot{width:7px;height:7px;border-radius:50%;background:#7fe3a6;box-shadow:0 0 0 3px rgba(127,227,166,.25)}
+.posd-chip.is-bad{background:var(--bad)} .posd-chip.is-bad .dot{background:#ffd0d4;box-shadow:0 0 0 3px rgba(255,208,212,.3)}
+.posd-chip.is-warn{background:var(--warn)}
+.posd-meta{display:flex;gap:16px;margin-top:13px;font-size:13px;color:#cdd9ef}
+.posd-meta span{display:inline-flex;align-items:center;gap:6px}
+.posd-meta .late.is-bad{color:#ffc3c6;font-weight:700}
+.posd-x{position:absolute;top:16px;right:16px;width:32px;height:32px;border:none;border-radius:9px;
+  background:rgba(255,255,255,.14);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s}
+.posd-x:hover{background:rgba(255,255,255,.28)}
+.posd-x:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(255,255,255,.5)}
+
+/* ===================== BODY ===================== */
+.posd-body{flex:1 1 auto;overflow-y:auto;padding:18px 20px 22px;background:var(--surface)}
+
+/* ----- Đọc nhanh: 3 số quyết định (luôn hiển thị trên tabs) ----- */
+.posd-glance{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+.posd-stat{background:var(--soft);border:1px solid var(--line);border-radius:var(--r);padding:13px 14px;
+  box-shadow:var(--sh-card)}
+.posd-stat .k{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.01em}
+.posd-stat .v{font-size:26px;font-weight:750;margin-top:6px;font-variant-numeric:tabular-nums;color:var(--navy);
+  letter-spacing:-.02em;line-height:1}
+.posd-stat .v.tone-ok{color:var(--ok)} .posd-stat .v.tone-warn{color:var(--warn)} .posd-stat .v.tone-bad{color:var(--bad)}
+.posd-stat .v.state{font-size:15px;font-weight:700;padding-top:7px;color:var(--ink)}
+.posd-stat .sub{font-size:11px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
+.posd-progress{height:6px;border-radius:4px;background:#e1e9f3;margin-top:10px;overflow:hidden}
+.posd-progress > span{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue),#4f86ff);
+  transition:width .3s var(--ease)}
+
+.posd-stagestrip{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:13px;padding:12px 14px;
+  background:var(--soft-2);border-radius:var(--r);font-size:13px}
+.posd-stagestrip .pair{display:flex;flex-direction:column;gap:2px}
+.posd-stagestrip .k{font-size:10.5px;color:var(--label);font-weight:600}
+.posd-stagestrip .vv{font-weight:700;font-variant-numeric:tabular-nums}
+.posd-stagestrip .vv.tone-ok{color:var(--ok)} .posd-stagestrip .vv.tone-bad{color:var(--bad)}
+
+/* ===================== TABS (segmented control) ===================== */
+.posd-tabs{position:relative;display:flex;gap:4px;margin:18px 0 16px;padding:4px;background:var(--soft-2);
+  border-radius:var(--r-pill);border:1px solid var(--line)}
+.posd-tab-ind{position:absolute;top:4px;left:4px;height:calc(100% - 8px);width:calc(50% - 4px);
+  background:var(--surface);border-radius:var(--r-pill);box-shadow:0 2px 8px rgba(17,38,74,.12);
+  transition:transform .22s var(--ease)}
+.posd-tab{position:relative;z-index:1;flex:1;border:none;background:none;cursor:pointer;padding:9px 10px;
+  font-size:13.5px;font-weight:700;color:var(--muted);border-radius:var(--r-pill);display:inline-flex;
+  align-items:center;justify-content:center;gap:7px;transition:color .18s}
+.posd-tab[aria-selected="true"]{color:var(--navy)}
+.posd-tab:focus-visible{outline:none;box-shadow:0 0 0 3px var(--blue-ring)}
+.posd-tab .badge{min-width:19px;height:19px;padding:0 6px;border-radius:var(--r-pill);background:var(--blue);color:#fff;
+  font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.posd-tab[aria-selected="false"] .badge{background:#c3cedd;color:#fff}
+
+.posd-panel{animation:posd-fade .22s ease-out}
+@keyframes posd-fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ===================== FORM (tab Ghi nhận) ===================== */
+.posd-formhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.posd-formhead .ttl{font-size:13px;font-weight:750;color:var(--ink);letter-spacing:-.01em}
+.posd-now{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--blue);font-weight:600;cursor:pointer;
+  user-select:none}
+.posd-now input{width:15px;height:15px;accent-color:var(--blue);cursor:pointer}
+
+.posd-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.01em;margin-bottom:6px}
+.posd-row{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:11px}
+.posd-input{width:100%;padding:11px 13px;border:1.4px solid var(--line);border-radius:var(--r-ctl);font-size:15px;
+  color:var(--ink);background:var(--surface);font-variant-numeric:tabular-nums;transition:border-color .15s,box-shadow .15s}
+.posd-input::placeholder{color:#9aa6b5}
+.posd-input:focus-visible{outline:none;border-color:var(--blue);box-shadow:0 0 0 3.5px var(--blue-ring)}
+.posd-input.ro{background:var(--soft-2);color:var(--muted);border-color:var(--line)}
+.posd-input.invalid{border-color:var(--bad);box-shadow:0 0 0 3.5px var(--bad-bg)}
+.posd-err{display:block;min-height:15px;margin-top:5px;font-size:11.5px;color:var(--bad);font-weight:600}
+
+.posd-presets{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+.posd-preset{border:1.4px solid var(--line);background:var(--surface);border-radius:var(--r-pill);padding:7px 13px;
+  font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s}
+.posd-preset:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}
+.posd-preset:focus-visible{outline:none;box-shadow:0 0 0 3px var(--blue-ring)}
+.posd-preset[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:#fff}
+
+.posd-live{margin-top:13px;padding:12px 14px;border-radius:var(--r-ctl);background:var(--blue-soft);
+  font-size:13px;color:var(--blue-700);display:flex;align-items:center;gap:9px;font-variant-numeric:tabular-nums;
+  border:1px solid #dfe9ff}
+.posd-live.is-warn{background:var(--warn-bg);color:var(--warn);border-color:#f5e2bf}
+.posd-live b{font-weight:750}
+
+.posd-actions{margin-top:16px}
+.posd-save{width:100%;background:var(--blue-700);color:#fff;border:none;border-radius:var(--r-ctl);font-size:16px;
+  font-weight:700;padding:14px;cursor:pointer;transition:filter .15s,transform .05s,box-shadow .15s;
+  box-shadow:0 8px 20px rgba(27,70,194,.26)}
+.posd-save:hover{filter:brightness(1.07)}
+.posd-save:active{transform:translateY(1px)}
+.posd-save:disabled{background:#aebfd9;box-shadow:none;cursor:not-allowed}
+.posd-save:focus-visible{outline:none;box-shadow:0 0 0 3.5px var(--blue-ring),0 8px 20px rgba(27,70,194,.26)}
+.posd-savehint{display:block;text-align:center;font-size:11px;color:var(--muted);margin-top:8px}
+.posd-savehint kbd{font-family:inherit;font-weight:700;background:var(--soft-2);border:1px solid var(--line);
+  border-radius:5px;padding:1px 6px;font-size:11px;color:var(--ink)}
+
+/* ===================== HISTORY (tab Lịch sử) ===================== */
+.posd-histsum{display:flex;gap:10px;margin-bottom:13px}
+.posd-histsum .cell{flex:1;background:var(--soft);border:1px solid var(--line);border-radius:var(--r-ctl);
+  padding:11px 13px;box-shadow:var(--sh-card)}
+.posd-histsum .k{font-size:11px;color:var(--muted);font-weight:600}
+.posd-histsum .v{font-size:19px;font-weight:750;margin-top:3px;font-variant-numeric:tabular-nums;color:var(--navy)}
+.posd-histsum .v.tone-bad{color:var(--bad)}
+
+.posd-history{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:var(--r);
+  overflow:hidden;font-size:13.5px}
+.posd-history thead th{background:var(--soft);text-align:left;font-size:11px;font-weight:700;color:var(--muted);
+  letter-spacing:.02em;padding:11px 13px;border-bottom:1px solid var(--line)}
+.posd-history tbody td{padding:11px 13px;border-bottom:1px solid var(--line-2);font-variant-numeric:tabular-nums}
+.posd-history tbody tr:last-child td{border-bottom:none}
+.posd-history tbody tr:hover td{background:var(--soft)}
+.posd-history .num{text-align:right}
+.posd-history .tp{color:var(--ok);font-weight:700} .posd-history .pp{color:var(--muted);font-weight:700}
+.posd-history .lk{font-weight:700;color:var(--ink)}
+.posd-history .who{color:var(--muted)}
+.posd-history tr.flash td{animation:posd-flash 1.5s ease-out}
+@keyframes posd-flash{0%{background:var(--ok-bg)}100%{background:transparent}}
+
+/* ===================== CONFIRM ===================== */
+.posd-confirm-back{position:fixed;inset:0;background:rgba(15,28,48,.34);z-index:var(--z-confirm);display:flex;
+  align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s}
+.posd-confirm-back.on{opacity:1;pointer-events:auto}
+.posd-confirm{background:var(--surface);border-radius:16px;max-width:352px;width:90%;padding:22px;box-shadow:var(--sh-2);
+  transform:scale(.95);transition:transform .16s var(--ease)}
+.posd-confirm-back.on .posd-confirm{transform:scale(1)}
+.posd-confirm h3{margin:0 0 8px;font-size:16px;font-weight:750}
+.posd-confirm p{margin:0 0 18px;font-size:13.5px;color:var(--muted);line-height:1.55}
+.posd-confirm .btns{display:flex;gap:10px;justify-content:flex-end}
+.posd-confirm button{border-radius:var(--r-ctl);padding:10px 17px;font-size:13.5px;font-weight:700;cursor:pointer;
+  border:1.4px solid var(--line);background:var(--surface);color:var(--ink);transition:filter .15s,background .15s}
+.posd-confirm button:hover{background:var(--soft)}
+.posd-confirm button:focus-visible{outline:none;box-shadow:0 0 0 3px var(--blue-ring)}
+.posd-confirm button.primary{background:var(--blue-700);border-color:var(--blue-700);color:#fff}
+.posd-confirm button.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.posd-confirm button.primary:hover,.posd-confirm button.danger:hover{filter:brightness(1.07);background:inherit}
+
+@media (max-width:480px){.posd-glance{grid-template-columns:1fr 1fr}.posd-row{grid-template-columns:1fr 1fr}}
+@media (prefers-reduced-motion:reduce){
+  .posd-drawer,.posd-backdrop,.posd-progress>span,.posd-confirm,.posd-confirm-back,.posd-tab-ind{transition:none}
+  .posd-panel{animation:none} .posd-history tr.flash td{animation:none}
+}
+.posd svg{display:block}
+</style>
+</head>
+<body>
+
+<div class="demo-stage">
+  <div class="demo-hint">Bấm vào thanh PO để mở drawer (giả lập <code>mesgantt_po_click</code>)</div>
+  <button class="demo-bar" id="poBar">PO240605 · Nước mắm Ngọc Huy<span class="pct">60%</span></button>
+  <div class="demo-hint"><b>Enter</b> = Lưu · <b>Esc</b> = Đóng · <b>←/→</b> chuyển tab · <b>Tab</b> đi theo thứ tự</div>
+</div>
+
+<div class="posd">
+  <div class="posd-backdrop" id="backdrop"></div>
+
+  <aside class="posd-drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="posdTitle" hidden>
+    <header class="posd-head">
+      <button class="posd-x" id="btnClose" aria-label="Đóng drawer" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+      <div class="eyebrow">Lệnh sản xuất</div>
+      <div class="titlerow">
+        <h2 id="posdTitle">PO240605 · Nước mắm Ngọc Huy</h2>
+        <span class="posd-chip" id="statusChip"><span class="dot"></span>ĐANG SẢN XUẤT</span>
+      </div>
+      <div class="posd-meta">
+        <span><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>08:00 → 15:30</span>
+        <span class="late" id="lateMeta">Chậm 0m</span>
+      </div>
+    </header>
+
+    <div class="posd-body">
+
+      <!-- ĐỌC NHANH (context dùng chung cho cả 2 tab) -->
+      <section aria-label="Đọc nhanh tình trạng">
+        <div class="posd-glance">
+          <div class="posd-stat">
+            <div class="k">Tiến độ</div>
+            <div class="v" id="gProgress">60%</div>
+            <div class="posd-progress"><span id="gProgressBar" style="width:60%"></span></div>
+          </div>
+          <div class="posd-stat">
+            <div class="k">Còn cần SX</div>
+            <div class="v" id="gRemain">1.200</div>
+            <div class="sub">/ KH 3.000</div>
+          </div>
+          <div class="posd-stat">
+            <div class="k">Trạng thái</div>
+            <div class="v state" id="gState">Đúng tiến độ</div>
+            <div class="sub" id="gStateSub">NVL đủ</div>
+          </div>
+        </div>
+        <div class="posd-stagestrip">
+          <div class="pair"><span class="k">Công đoạn · Tổ</span><span class="vv">Mixing · Team 2</span></div>
+          <div class="pair"><span class="k">Đạt yêu cầu</span><span class="vv" id="sOk">1.800</span></div>
+          <div class="pair"><span class="k">Phế phẩm</span><span class="vv" id="sScrap">50</span></div>
+          <div class="pair"><span class="k">Đã chuyển giao</span><span class="vv" id="sDeliver">1.800</span></div>
+        </div>
+      </section>
+
+      <!-- TABS -->
+      <div class="posd-tabs" role="tablist" aria-label="Nội dung PO">
+        <span class="posd-tab-ind" id="tabInd" aria-hidden="true"></span>
+        <button class="posd-tab" id="tabRecordBtn" role="tab" aria-selected="true" aria-controls="panelRecord" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>
+          Ghi nhận
+        </button>
+        <button class="posd-tab" id="tabHistoryBtn" role="tab" aria-selected="false" aria-controls="panelHistory" tabindex="-1" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="8.3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+          Lịch sử <span class="badge" id="histBadge">2</span>
+        </button>
+      </div>
+
+      <!-- PANEL: GHI NHẬN -->
+      <section class="posd-panel" id="panelRecord" role="tabpanel" aria-labelledby="tabRecordBtn">
+        <div class="posd-formhead">
+          <span class="ttl">Ghi nhận sản lượng</span>
+          <label class="posd-now"><input type="checkbox" id="useNow" checked> Dùng giờ hiện tại</label>
+        </div>
+
+        <div class="posd-row">
+          <div class="posd-field">
+            <label for="fTime">Thời gian</label>
+            <input class="posd-input ro" id="fTime" type="text" readonly tabindex="-1" aria-readonly="true">
+          </div>
+          <div class="posd-field">
+            <label for="fTP">Thành phẩm</label>
+            <input class="posd-input" id="fTP" type="text" inputmode="numeric" value="" aria-describedby="errTP">
+            <span class="posd-err" id="errTP" role="alert"></span>
+          </div>
+          <div class="posd-field">
+            <label for="fPP">Phế phẩm</label>
+            <input class="posd-input" id="fPP" type="text" inputmode="numeric" value="" aria-describedby="errPP">
+            <span class="posd-err" id="errPP" role="alert"></span>
+          </div>
+        </div>
+
+        <div class="posd-field" style="margin-top:2px">
+          <label>Lý do phế phẩm <span style="font-weight:500;color:var(--label)">(chọn nhanh hoặc gõ)</span></label>
+          <div class="posd-presets" id="presets" role="group" aria-label="Lý do phế phẩm">
+            <button class="posd-preset" type="button" aria-pressed="false">Lỗi máy</button>
+            <button class="posd-preset" type="button" aria-pressed="false">Sai quy cách</button>
+            <button class="posd-preset" type="button" aria-pressed="false">NVL lỗi</button>
+            <button class="posd-preset" type="button" aria-pressed="false">Vệ sinh đầu ca</button>
+          </div>
+          <input class="posd-input" id="fNote" type="text" placeholder="Ghi chú thêm…" style="margin-top:9px">
+        </div>
+
+        <div class="posd-live" id="live" aria-live="polite">
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="liveText">Nhập số để xem tác động</span>
+        </div>
+
+        <div class="posd-actions">
+          <button class="posd-save" id="btnSave" type="button" disabled>Lưu &amp; thêm</button>
+          <span class="posd-savehint">Nhấn <kbd>Enter</kbd> để lưu nhanh · con trỏ tự về ô Thành phẩm</span>
+        </div>
+      </section>
+
+      <!-- PANEL: LỊCH SỬ -->
+      <section class="posd-panel" id="panelHistory" role="tabpanel" aria-labelledby="tabHistoryBtn" hidden>
+        <div class="posd-histsum">
+          <div class="cell"><div class="k">Số lần ghi</div><div class="v" id="hCount">2</div></div>
+          <div class="cell"><div class="k">TP đã ghi</div><div class="v" id="hTP">1.300</div></div>
+          <div class="cell"><div class="k">PP đã ghi</div><div class="v" id="hPP">15</div></div>
+        </div>
+        <table class="posd-history">
+          <thead><tr><th>Thời gian</th><th class="num">TP</th><th class="num">PP</th><th class="num">Lũy kế</th><th>Nhân sự</th></tr></thead>
+          <tbody id="historyBody">
+            <tr><td>10:00</td><td class="num tp">+600</td><td class="num pp">5</td><td class="num lk">1.800</td><td class="who">Mr. A</td></tr>
+            <tr><td>09:30</td><td class="num tp">+700</td><td class="num pp">10</td><td class="num lk">1.200</td><td class="who">Mr. B</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+    </div><!-- /body -->
+  </aside>
+
+  <div class="posd-confirm-back" id="confirmBack">
+    <div class="posd-confirm" role="alertdialog" aria-modal="true" aria-labelledby="cfTitle" aria-describedby="cfDesc">
+      <h3 id="cfTitle">Bỏ thay đổi chưa lưu?</h3>
+      <p id="cfDesc">Bạn đang nhập dở một dòng ghi nhận. Đóng bây giờ sẽ mất số liệu vừa nhập.</p>
+      <div class="btns">
+        <button type="button" id="cfStay">Ở lại</button>
+        <button type="button" class="danger" id="cfLeave">Đóng &amp; bỏ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var PLAN=3000, accum=1800, scrapTotal=50, SCRAP_WARN=0.03, person="Mr. A";
+  var hCount=2, hTP=1300, hPP=15;   // tổng phiên ghi (demo)
+
+  var $=function(id){return document.getElementById(id);};
+  var drawer=$("drawer"), backdrop=$("backdrop");
+  var fTP=$("fTP"), fPP=$("fPP"), fNote=$("fNote"), fTime=$("fTime"), useNow=$("useNow");
+  var errTP=$("errTP"), errPP=$("errPP"), btnSave=$("btnSave");
+  var liveBox=$("live"), liveText=$("liveText");
+  var panelRecord=$("panelRecord");
+  var lastTrigger=null, dirty=false, pendingOverPlan=false;
+
+  function fmt(n){return n.toLocaleString("vi-VN");}
+  function parseNum(v){v=String(v).replace(/[.\s,]/g,"").trim();if(v==="")return 0;var n=parseInt(v,10);return isNaN(n)?NaN:n;}
+  function nowStr(){var d=new Date(),p=function(x){return String(x).padStart(2,"0");};
+    return p(d.getDate())+"-"+p(d.getMonth()+1)+"-"+d.getFullYear()+"  "+p(d.getHours())+":"+p(d.getMinutes());}
+
+  /* ---------- tabs ---------- */
+  var tabs=[$("tabRecordBtn"),$("tabHistoryBtn")];
+  var panels=[panelRecord,$("panelHistory")];
+  function selectTab(i){
+    tabs.forEach(function(t,k){
+      var on=k===i;
+      t.setAttribute("aria-selected",on?"true":"false");
+      t.tabIndex=on?0:-1;
+      panels[k].hidden=!on;
+    });
+    $("tabInd").style.transform="translateX("+(i*100)+"%)";
+  }
+  tabs.forEach(function(t,i){
+    t.addEventListener("click",function(){selectTab(i);});
+    t.addEventListener("keydown",function(e){
+      if(e.key==="ArrowRight"||e.key==="ArrowLeft"){
+        e.preventDefault();
+        var n=(i+(e.key==="ArrowRight"?1:-1)+tabs.length)%tabs.length;
+        selectTab(n); tabs[n].focus();
+      }
+    });
+  });
+
+  /* ---------- validate + realtime ---------- */
+  function validate(){
+    var tp=parseNum(fTP.value), pp=parseNum(fPP.value);
+    var okTP=true, okPP=true; errTP.textContent=""; errPP.textContent="";
+    fTP.classList.remove("invalid"); fPP.classList.remove("invalid");
+    if(isNaN(tp)||tp<0){okTP=false;if(fTP.value.trim()!==""){errTP.textContent="Số không hợp lệ";fTP.classList.add("invalid");}}
+    if(isNaN(pp)||pp<0){okPP=false;if(fPP.value.trim()!==""){errPP.textContent="Số không hợp lệ";fPP.classList.add("invalid");}}
+    var vtp=okTP?tp:0, vpp=okPP?pp:0, sumZero=(vtp+vpp)===0;
+    var newAccum=accum+vtp, remain=Math.max(0,PLAN-newAccum), prog=Math.round(newAccum/PLAN*100), over=newAccum>PLAN;
+    pendingOverPlan=over;
+    liveBox.classList.toggle("is-warn",over);
+    if(sumZero){liveText.textContent="Chưa nhập số lượng";}
+    else if(over){liveText.innerHTML="Sau khi lưu: lũy kế <b>"+fmt(newAccum)+"</b> · <b>vượt kế hoạch +"+fmt(newAccum-PLAN)+"</b> · cần xác nhận";}
+    else{liveText.innerHTML="Sau khi lưu: còn lại <b>"+fmt(remain)+"</b> · tiến độ <b>"+prog+"%</b>";}
+    btnSave.disabled=!(okTP&&okPP&&!sumZero&&!isNaN(tp)&&!isNaN(pp));
+    dirty=(fTP.value.trim()!==""||fPP.value.trim()!==""||fNote.value.trim()!=="");
+  }
+
+  /* ---------- save ---------- */
+  function doSave(){
+    if(btnSave.disabled) return;
+    var tp=parseNum(fTP.value), pp=parseNum(fPP.value);
+    if(pendingOverPlan){
+      askConfirm({title:"Vượt kế hoạch",danger:false,okLabel:"Xác nhận lưu",
+        desc:"Lũy kế sau khi lưu là "+fmt(accum+tp)+", vượt kế hoạch "+fmt(PLAN)+" (+"+fmt(accum+tp-PLAN)+"). Vẫn ghi nhận?",
+        onOk:function(){commit(tp,pp);}});
+    }else commit(tp,pp);
+  }
+  function commit(tp,pp){
+    accum+=tp; scrapTotal+=pp; hCount++; hTP+=tp; hPP+=pp;
+    var tb=$("historyBody"), tr=document.createElement("tr"); tr.className="flash";
+    var t=nowStr().split("  ")[1];
+    tr.innerHTML="<td>"+t+"</td><td class='num tp'>+"+fmt(tp)+"</td><td class='num pp'>"+fmt(pp)+
+      "</td><td class='num lk'>"+fmt(accum)+"</td><td class='who'>"+person+"</td>";
+    tb.insertBefore(tr,tb.firstChild);
+    refreshHeader();
+    fTP.value="";fPP.value="";fNote.value="";
+    document.querySelectorAll(".posd-preset").forEach(function(b){b.setAttribute("aria-pressed","false");});
+    dirty=false; validate(); fTP.focus();
+  }
+  function refreshHeader(){
+    var remain=Math.max(0,PLAN-accum), prog=Math.round(accum/PLAN*100);
+    $("gProgress").textContent=prog+"%"; $("gProgressBar").style.width=Math.min(100,prog)+"%";
+    $("gRemain").textContent=fmt(remain);
+    $("sOk").textContent=fmt(accum); $("sDeliver").textContent=fmt(accum); $("sScrap").textContent=fmt(scrapTotal);
+    var gp=$("gProgress"); gp.classList.remove("tone-ok","tone-warn"); if(prog>=100)gp.classList.add("tone-ok");
+    var rate=scrapTotal/Math.max(1,accum+scrapTotal); $("sScrap").classList.toggle("tone-bad",rate>SCRAP_WARN);
+    // cập nhật tab Lịch sử
+    $("histBadge").textContent=hCount; $("hCount").textContent=hCount;
+    $("hTP").textContent=fmt(hTP); $("hPP").textContent=fmt(hPP);
+    $("hPP").classList.toggle("tone-bad",rate>SCRAP_WARN);
+  }
+
+  /* ---------- confirm ---------- */
+  var confirmBack=$("confirmBack"), cfOkBtn=$("cfLeave"), cfStay=$("cfStay"), confirmState=null;
+  function askConfirm(o){confirmState=o;$("cfTitle").textContent=o.title;$("cfDesc").textContent=o.desc;
+    cfOkBtn.textContent=o.okLabel||"Đồng ý";cfOkBtn.className=o.danger?"danger":"primary";
+    confirmBack.classList.add("on");cfOkBtn.focus();}
+  function closeConfirm(){confirmBack.classList.remove("on");confirmState=null;}
+  cfStay.addEventListener("click",closeConfirm);
+  cfOkBtn.addEventListener("click",function(){var s=confirmState;closeConfirm();if(s&&s.onOk)s.onOk();});
+
+  /* ---------- open/close + focus ---------- */
+  function openDrawer(trigger){
+    lastTrigger=trigger||document.activeElement;
+    drawer.hidden=false; void drawer.offsetWidth;
+    drawer.classList.add("on"); backdrop.classList.add("on");
+    fTime.value=nowStr(); selectTab(0); dirty=false; validate();
+    setTimeout(function(){fTP.focus();},70);
+    document.addEventListener("keydown",onKey);
+  }
+  function reallyClose(){
+    drawer.classList.remove("on"); backdrop.classList.remove("on");
+    document.removeEventListener("keydown",onKey);
+    setTimeout(function(){drawer.hidden=true;if(lastTrigger)lastTrigger.focus();},280);
+  }
+  function tryClose(){
+    if(dirty){askConfirm({title:"Bỏ thay đổi chưa lưu?",danger:true,okLabel:"Đóng & bỏ",
+      desc:"Bạn đang nhập dở một dòng ghi nhận. Đóng bây giờ sẽ mất số liệu vừa nhập.",onOk:reallyClose});}
+    else reallyClose();
+  }
+  function focusables(){
+    return Array.prototype.filter.call(
+      drawer.querySelectorAll('button,input,[tabindex]:not([tabindex="-1"])'),
+      function(el){return !el.disabled&&el.offsetParent!==null;});
+  }
+  function onKey(e){
+    if(confirmBack.classList.contains("on")){if(e.key==="Escape"){e.preventDefault();closeConfirm();}return;}
+    if(e.key==="Escape"){e.preventDefault();tryClose();return;}
+    if(e.key==="Enter"&&!e.shiftKey&&panelRecord.contains(document.activeElement)){e.preventDefault();doSave();return;}
+    if(e.key==="Tab"){
+      var f=focusables();if(!f.length)return;var first=f[0],last=f[f.length-1];
+      if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+    }
+  }
+
+  /* ---------- presets ---------- */
+  $("presets").addEventListener("click",function(e){
+    var b=e.target.closest(".posd-preset");if(!b)return;
+    b.setAttribute("aria-pressed",b.getAttribute("aria-pressed")==="true"?"false":"true");
+    var sel=Array.prototype.map.call(document.querySelectorAll('.posd-preset[aria-pressed="true"]'),function(x){return x.textContent;});
+    fNote.value=sel.join(", "); validate();
+  });
+
+  /* ---------- bindings ---------- */
+  ["input","blur"].forEach(function(ev){fTP.addEventListener(ev,validate);fPP.addEventListener(ev,validate);});
+  fNote.addEventListener("input",validate);
+  useNow.addEventListener("change",function(){
+    fTime.classList.toggle("ro",useNow.checked);fTime.readOnly=useNow.checked;fTime.tabIndex=useNow.checked?-1:0;
+    if(useNow.checked)fTime.value=nowStr();
+  });
+  btnSave.addEventListener("click",doSave);
+  $("btnClose").addEventListener("click",tryClose);
+  backdrop.addEventListener("click",tryClose);
+  $("poBar").addEventListener("click",function(){openDrawer(this);});
+})();
+</script>
+</body>
+</html>
