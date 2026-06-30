@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glance — So sánh Hướng A (3 card) vs Hướng B (gộp 1 card)</title>
+<style>
+/* So sánh 2 hướng cho khối .posd-glance — bright palette đồng bộ po-detail-drawer-v2.
+   Scope dưới .posd, token trên wrapper (APEX-safe). Chỉ trình bày glance + stage strip. */
+body{margin:0;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;background:#eef1f7;
+  -webkit-font-smoothing:antialiased;color:#1c2536;padding:28px}
+h1{font-size:16px;margin:0 0 6px}.lead{color:#5a6b86;font-size:13px;margin:0 0 24px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;max-width:1100px}
+.col h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#15674C;margin:0 0 4px}
+.col .note{font-size:12px;color:#5a6b86;margin:0 0 14px;min-height:32px}
+/* mô phỏng độ rộng drawer thật (~472px) để đánh giá đúng */
+.frame{width:432px;max-width:100%;background:#fff;border:1px solid #e6eaf2;border-radius:14px;
+  padding:18px;box-shadow:0 8px 28px rgba(20,40,80,.10)}
+
+/* ===== tokens .posd (trích từ v2) ===== */
+.posd{
+  --primary:#15674C; --primary-700:#0F4D38; --primary-soft:#e8f2ee; --ring:rgba(21,103,76,.20);
+  --accent:#1D4ED8; --accent-2:#4f86ff;
+  --ok:#1faa61; --ok-bg:#e6f7ee; --warn:#f59017; --warn-bg:#fff3e0; --bad:#e23b4e; --bad-bg:#fdeaec;
+  --ink:#1c2536; --muted:#5a6b86; --label:#93a0b6;
+  --line:#e6eaf2; --line-2:#eef1f7; --surface:#fff; --soft:#f7f9fc; --soft-2:#f4f6fb;
+  --r:14px; --r-ctl:10px; --r-pill:999px; --sh-card:0 1px 3px rgba(20,40,80,.05);
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+.posd *{box-sizing:border-box}
+
+/* ============================================================= */
+/* HƯỚNG A — 3 card rời (tinh chỉnh cân bằng)                     */
+/* ============================================================= */
+.A .glance{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+.A .stat{background:var(--soft);border:1px solid var(--line);border-radius:var(--r);padding:13px 14px;
+  box-shadow:var(--sh-card);display:flex;flex-direction:column;min-height:96px}
+.A .stat .k{font-size:11px;color:var(--muted);font-weight:600}
+.A .stat .v{font-size:25px;font-weight:750;margin-top:6px;font-variant-numeric:tabular-nums;color:var(--ink);
+  letter-spacing:-.02em;line-height:1}
+.A .stat .foot{margin-top:auto;padding-top:10px}            /* baseline phụ đồng cấp -> cân bằng (FG1) */
+.A .stat .sub{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.A .progress{height:6px;border-radius:4px;background:var(--line-2);overflow:hidden}
+.A .progress>span{display:block;height:100%;border-radius:4px;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.A .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#0c6b3d}
+.A .chip .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+
+/* ============================================================= */
+/* HƯỚNG B — gộp 1 card                                           */
+/* ============================================================= */
+.B .card{background:var(--soft);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--sh-card);overflow:hidden}
+.B .card .cap{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--label);
+  padding:12px 16px 0}
+.B .cols{display:grid;grid-template-columns:1fr 1fr 1fr;padding:8px 16px 14px}
+.B .cell{position:relative;padding:4px 14px 4px 0}
+.B .cell+.cell{padding-left:14px;border-left:1px solid var(--line)}
+.B .cell .k{font-size:10.5px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+.B .cell .v{font-size:24px;font-weight:750;margin-top:5px;font-variant-numeric:tabular-nums;color:var(--ink);
+  letter-spacing:-.02em;line-height:1.05}
+.B .cell .sub{font-size:11px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+.B .chip{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:750;color:#0c6b3d;margin-top:5px}
+.B .chip .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.B .barwrap{display:flex;align-items:center;gap:11px;padding:12px 16px;border-top:1px solid var(--line);
+  background:var(--surface)}
+.B .progress{flex:1;height:6px;border-radius:4px;background:var(--line-2);overflow:hidden}
+.B .progress>span{display:block;height:100%;border-radius:4px;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.B .barlbl{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.B .barlbl b{color:var(--ink);font-weight:700}
+
+/* ============================================================= */
+/* STAGE STRIP (chung — lưới 2×2 cố định, giữ nguyên 4 số)        */
+/* ============================================================= */
+.stagestrip{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-top:13px;padding:13px 15px;
+  background:var(--soft-2);border-radius:var(--r);font-size:13px}
+.stagestrip .pair{display:flex;flex-direction:column;gap:3px}
+.stagestrip .k{font-size:10.5px;color:var(--label);font-weight:600;letter-spacing:.02em}
+.stagestrip .vv{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.stagestrip .vv.tone-bad{color:var(--bad)}
+
+/* ============================================================= */
+/* HƯỚNG C — bar gánh Tiến độ + Còn cần SX; nâng Trạng thái lên   */
+/* ============================================================= */
+.C .card{background:var(--soft);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--sh-card);padding:16px 16px 15px}
+/* Hàng 1: Trạng thái = headline + chỉ báo NVL bên phải */
+.C .statusrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.C .status{display:inline-flex;align-items:center;gap:9px;font-size:16px;font-weight:750;color:var(--ink);
+  letter-spacing:-.01em}
+.C .status .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);
+  box-shadow:0 0 0 3px rgba(31,170,97,.18);flex:0 0 auto}
+.C .status.is-warn{color:#9a5b00} .C .status.is-warn .dot{background:var(--warn);box-shadow:0 0 0 3px rgba(245,144,23,.18)}
+.C .status.is-bad{color:#b51f30} .C .status.is-bad .dot{background:var(--bad);box-shadow:0 0 0 3px rgba(226,59,78,.18)}
+.C .nvl{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-pill);padding:5px 11px}
+.C .nvl .dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.C .nvl.is-bad{color:#b51f30;border-color:#f6c4cb;background:var(--bad-bg)} .C .nvl.is-bad .dot{background:var(--bad)}
+/* Hàng 2: progress trục + % to bên phải */
+.C .prog{display:flex;align-items:center;gap:13px;margin-top:15px}
+.C .progress{flex:1;height:9px;border-radius:5px;background:var(--line-2);overflow:hidden}
+.C .progress>span{display:block;height:100%;border-radius:5px;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .4s var(--ease)}
+.C .pct{font-size:24px;font-weight:750;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+  line-height:1;min-width:64px;text-align:right}
+/* Hàng 3: caption gánh các số (đã SX / còn / KH) */
+.C .caption{margin-top:11px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.C .caption b{color:var(--ink);font-weight:700}
+.C .caption .rem{color:var(--accent);font-weight:700}
+
+.exrow{margin-top:20px}
+.exrow h3{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#5a6b86;margin:0 0 8px}
+.posd-chip{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:750}
+.tone-warn{color:#9a5b00!important} .tone-bad{color:#b51f30!important}
+</style>
+</head>
+<body>
+<h1>Khối "Đọc nhanh" — So sánh Hướng A vs Hướng B</h1>
+<p class="lead">Cùng dữ liệu mẫu (Tiến độ 60% · Còn cần SX 1.200 / KH 3.000 · Đúng tiến độ · NVL đủ).
+Stage strip 2×2 giữ nguyên 4 số ở cả hai. Bright palette đồng bộ drawer v2.</p>
+
+<!-- ================= HƯỚNG C (featured) ================= -->
+<div style="max-width:1100px;margin:0 0 28px">
+  <h2 style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#15674C;margin:0 0 4px">★ Hướng C — Bar gánh Tiến độ + Còn cần SX, nâng Trạng thái lên headline</h2>
+  <p style="font-size:12px;color:#5a6b86;margin:0 0 14px">Bỏ 2 card "Tiến độ" và "Còn cần SX" (đã được progress block + caption gánh trọn). Trạng thái tiến độ thành dòng tiêu đề chính + chỉ báo NVL bên phải.</p>
+  <div style="display:flex;gap:24px;flex-wrap:wrap">
+    <div style="flex:1;min-width:380px">
+      <div style="font-size:11px;color:#5a6b86;margin-bottom:8px">Bình thường</div>
+      <div class="frame posd C">
+        <div class="card">
+          <div class="statusrow">
+            <span class="status"><span class="dot"></span>Đúng tiến độ</span>
+            <span class="nvl"><span class="dot"></span>NVL đủ</span>
+          </div>
+          <div class="prog">
+            <div class="progress"><span style="width:60%"></span></div>
+            <span class="pct">60%</span>
+          </div>
+          <div class="caption">Đã SX <b>1.800</b> · còn <span class="rem">1.200</span> / KH <b>3.000</b></div>
+        </div>
+        <div class="stagestrip">
+          <div class="pair"><span class="k">Công đoạn · Tổ</span><span class="vv">Mixing · Team 2</span></div>
+          <div class="pair"><span class="k">Đạt yêu cầu</span><span class="vv">1.800</span></div>
+          <div class="pair"><span class="k">Phế phẩm</span><span class="vv">50</span></div>
+          <div class="pair"><span class="k">Đã chuyển giao</span><span class="vv">1.800</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:380px">
+      <div style="font-size:11px;color:#5a6b86;margin-bottom:8px">Ngoại lệ (chậm + thiếu NVL + phế cao)</div>
+      <div class="frame posd C">
+        <div class="card">
+          <div class="statusrow">
+            <span class="status is-warn"><span class="dot"></span>Chậm 45m</span>
+            <span class="nvl is-bad"><span class="dot"></span>Thiếu NVL</span>
+          </div>
+          <div class="prog">
+            <div class="progress"><span style="width:42%"></span></div>
+            <span class="pct">42%</span>
+          </div>
+          <div class="caption">Đã SX <b>1.260</b> · còn <span class="rem">1.740</span> / KH <b>3.000</b></div>
+        </div>
+        <div class="stagestrip">
+          <div class="pair"><span class="k">Công đoạn · Tổ</span><span class="vv">Mixing · Team 2</span></div>
+          <div class="pair"><span class="k">Đạt yêu cầu</span><span class="vv">1.260</span></div>
+          <div class="pair"><span class="k">Phế phẩm</span><span class="vv tone-bad">95</span></div>
+          <div class="pair"><span class="k">Đã chuyển giao</span><span class="vv">1.200</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="cmp">
+
+  <!-- ================= HƯỚNG A ================= -->
+  <div class="col">
+    <h2>Hướng A — Giữ 3 card</h2>
+    <p class="note">3 ô rời, ép baseline phụ đồng cấp để cân bằng; Trạng thái thành chip+dot.</p>
+    <div class="frame posd A">
+      <div class="glance">
+        <div class="stat">
+          <div class="k">Tiến độ</div>
+          <div class="v">60%</div>
+          <div class="foot"><div class="progress"><span style="width:60%"></span></div></div>
+        </div>
+        <div class="stat">
+          <div class="k">Còn cần SX</div>
+          <div class="v">1.200</div>
+          <div class="foot"><div class="sub">/ KH 3.000</div></div>
+        </div>
+        <div class="stat">
+          <div class="k">Trạng thái</div>
+          <div class="v" style="font-size:15px;padding-top:6px"><span class="chip"><span class="dot"></span>Đúng tiến độ</span></div>
+          <div class="foot"><div class="sub">NVL đủ</div></div>
+        </div>
+      </div>
+      <div class="stagestrip">
+        <div class="pair"><span class="k">Công đoạn · Tổ</span><span class="vv">Mixing · Team 2</span></div>
+        <div class="pair"><span class="k">Đạt yêu cầu</span><span class="vv">1.800</span></div>
+        <div class="pair"><span class="k">Phế phẩm</span><span class="vv">50</span></div>
+        <div class="pair"><span class="k">Đã chuyển giao</span><span class="vv">1.800</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= HƯỚNG B ================= -->
+  <div class="col">
+    <h2>Hướng B — Gộp 1 card (khuyến nghị)</h2>
+    <p class="note">Một khung "Tình trạng sản xuất": 3 cột bằng nhau + progress bar footer chung chú thích cả %/còn lại.</p>
+    <div class="frame posd B">
+      <div class="card">
+        <div class="cap">Tình trạng sản xuất</div>
+        <div class="cols">
+          <div class="cell">
+            <div class="k">Tiến độ</div>
+            <div class="v">60%</div>
+          </div>
+          <div class="cell">
+            <div class="k">Còn cần SX</div>
+            <div class="v">1.200</div>
+            <div class="sub">/ KH 3.000</div>
+          </div>
+          <div class="cell">
+            <div class="k">Trạng thái</div>
+            <div class="chip"><span class="dot"></span>Đúng TĐ</div>
+            <div class="sub">NVL đủ</div>
+          </div>
+        </div>
+        <div class="barwrap">
+          <div class="progress"><span style="width:60%"></span></div>
+          <div class="barlbl"><b>60%</b> · còn <b>1.200</b>/3.000</div>
+        </div>
+      </div>
+      <div class="stagestrip">
+        <div class="pair"><span class="k">Công đoạn · Tổ</span><span class="vv">Mixing · Team 2</span></div>
+        <div class="pair"><span class="k">Đạt yêu cầu</span><span class="vv">1.800</span></div>
+        <div class="pair"><span class="k">Phế phẩm</span><span class="vv">50</span></div>
+        <div class="pair"><span class="k">Đã chuyển giao</span><span class="vv">1.800</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- trạng thái exception minh hoạ (áp dụng cho cả 2 hướng) -->
+<div class="cmp exrow">
+  <div class="col">
+    <h3>Hướng A — khi có ngoại lệ (chậm + phế cao)</h3>
+    <div class="frame posd A">
+      <div class="glance">
+        <div class="stat">
+          <div class="k">Tiến độ</div>
+          <div class="v">42%</div>
+          <div class="foot"><div class="progress"><span style="width:42%"></span></div></div>
+        </div>
+        <div class="stat">
+          <div class="k">Còn cần SX</div>
+          <div class="v">1.740</div>
+          <div class="foot"><div class="sub">/ KH 3.000</div></div>
+        </div>
+        <div class="stat">
+          <div class="k">Trạng thái</div>
+          <div class="v" style="font-size:15px;padding-top:6px"><span class="chip tone-warn"><span class="dot" style="background:#f59017"></span>Chậm 45m</span></div>
+          <div class="foot"><div class="sub tone-bad">Thiếu NVL</div></div>
+        </div>
+      </div>
+      <div class="stagestrip">
+        <div class="pair"><span class="k">Công đoạn · Tổ</span><span class="vv">Mixing · Team 2</span></div>
+        <div class="pair"><span class="k">Đạt yêu cầu</span><span class="vv">1.260</span></div>
+        <div class="pair"><span class="k">Phế phẩm</span><span class="vv tone-bad">95</span></div>
+        <div class="pair"><span class="k">Đã chuyển giao</span><span class="vv">1.200</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <h3>Hướng B — khi có ngoại lệ (chậm + phế cao)</h3>
+    <div class="frame posd B">
+      <div class="card">
+        <div class="cap">Tình trạng sản xuất</div>
+        <div class="cols">
+          <div class="cell"><div class="k">Tiến độ</div><div class="v">42%</div></div>
+          <div class="cell"><div class="k">Còn cần SX</div><div class="v">1.740</div><div class="sub">/ KH 3.000</div></div>
+          <div class="cell"><div class="k">Trạng thái</div>
+            <div class="chip tone-warn"><span class="dot" style="background:#f59017"></span>Chậm 45m</div>
+            <div class="sub tone-bad">Thiếu NVL</div>
+          </div>
+        </div>
+        <div class="barwrap">
+          <div class="progress"><span style="width:42%"></span></div>
+          <div class="barlbl"><b>42%</b> · còn <b>1.740</b>/3.000</div>
+        </div>
+      </div>
+      <div class="stagestrip">
+        <div class="pair"><span class="k">Công đoạn · Tổ</span><span class="vv">Mixing · Team 2</span></div>
+        <div class="pair"><span class="k">Đạt yêu cầu</span><span class="vv">1.260</span></div>
+        <div class="pair"><span class="k">Phế phẩm</span><span class="vv tone-bad">95</span></div>
+        <div class="pair"><span class="k">Đã chuyển giao</span><span class="vv">1.200</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

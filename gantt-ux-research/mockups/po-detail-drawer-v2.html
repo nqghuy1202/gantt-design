@@ -14,26 +14,26 @@
    - tabular-nums cho số · focus-visible rõ · màu chỉ bật khi chạm ngưỡng
    ========================================================================= */
 
-body{margin:0;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;background:#e9eef4;min-height:100vh;
+body{margin:0;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;background:#eef1f7;min-height:100vh;
   -webkit-font-smoothing:antialiased}
 .demo-stage{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px}
-.demo-hint{color:#64748b;font-size:13.5px}
+.demo-hint{color:#5a6b86;font-size:13.5px}
 .demo-bar{cursor:pointer;border:none;color:#fff;border-radius:11px;padding:15px 24px;font-size:15px;font-weight:700;
-  background:linear-gradient(135deg,#2563eb,#1e4fd0);box-shadow:0 8px 24px rgba(37,99,235,.32)}
-.demo-bar:hover{filter:brightness(1.05)} .demo-bar .pct{opacity:.85;font-weight:600;margin-left:8px}
+  background:linear-gradient(135deg,#15674C,#0F4D38);box-shadow:0 8px 24px rgba(21,103,76,.30)}
+.demo-bar:hover{filter:brightness(1.06)} .demo-bar .pct{opacity:.85;font-weight:600;margin-left:8px}
 .demo-bar:active{transform:translateY(1px)}
 
 /* ===================== WRAPPER + TOKENS ===================== */
 .posd{
-  --navy:#13294b; --navy-2:#1f4fb0;
-  --blue:#2563eb; --blue-700:#1b46c2; --blue-soft:#eef3ff; --blue-ring:rgba(37,99,235,.18);
-  --ok:#15a34a; --ok-bg:#e7f7ee; --warn:#d9870a; --warn-bg:#fdf3e1; --bad:#e23744; --bad-bg:#fdecee;
-  --ink:#101a2c; --muted:#5b6675; --label:#5f6b7a;
-  --line:#e7edf4; --line-2:#eff3f8; --surface:#ffffff; --soft:#f6f9fd; --soft-2:#f0f5fb;
+  --primary:#15674C; --primary-700:#0F4D38; --primary-soft:#e8f2ee; --ring:rgba(21,103,76,.20);
+  --accent:#1D4ED8; --accent-2:#4f86ff; --accent-soft:#eef3ff;
+  --ok:#1faa61; --ok-bg:#e6f7ee; --warn:#f59017; --warn-bg:#fff3e0; --bad:#e23b4e; --bad-bg:#fdeaec;
+  --ink:#1c2536; --muted:#5a6b86; --label:#93a0b6;
+  --line:#e6eaf2; --line-2:#eef1f7; --surface:#ffffff; --soft:#f7f9fc; --soft-2:#f4f6fb;
   --r:14px; --r-ctl:10px; --r-pill:999px;
-  --sh-1:0 1px 2px rgba(17,38,74,.05), 0 8px 24px rgba(17,38,74,.06);
-  --sh-2:0 2px 6px rgba(17,38,74,.06), 0 16px 40px rgba(17,38,74,.12);
-  --sh-card:0 1px 2px rgba(17,38,74,.04);
+  --sh-1:0 1px 3px rgba(20,40,80,.06);
+  --sh-2:0 8px 28px rgba(20,40,80,.12);
+  --sh-card:0 1px 3px rgba(20,40,80,.05);
   --z-backdrop:40; --z-drawer:50; --z-confirm:60;
   --ease:cubic-bezier(.22,1,.36,1);
   color:var(--ink);font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;
@@ -51,61 +51,82 @@ body{margin:0;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;background:
 .posd-drawer.on{transform:translateX(0)}
 
 /* ===================== HEADER ===================== */
-.posd-head{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);color:#fff;
-  padding:20px 22px 18px;position:relative;flex:0 0 auto}
-.posd-head .eyebrow{font-size:11px;letter-spacing:.10em;text-transform:uppercase;color:#aebfdd;font-weight:600;margin-bottom:7px}
+.posd-head{background:linear-gradient(135deg,var(--primary-soft) 0%,var(--surface) 60%);color:var(--ink);
+  padding:20px 22px 18px;position:relative;flex:0 0 auto;border-bottom:1px solid var(--line)}
+.posd-head .eyebrow{font-size:11px;letter-spacing:.10em;text-transform:uppercase;color:var(--primary);font-weight:700;margin-bottom:7px}
 .posd-head .titlerow{display:flex;align-items:center;gap:10px;padding-right:40px}
-.posd-head h2{margin:0;font-size:20px;font-weight:750;line-height:1.22;letter-spacing:-.01em}
+.posd-head h2{margin:0;font-size:20px;font-weight:750;line-height:1.22;letter-spacing:-.01em;color:var(--ink)}
 .posd-chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.3px;
-  padding:5px 11px 5px 9px;border-radius:var(--r-pill);white-space:nowrap;background:rgba(255,255,255,.16);color:#fff}
-.posd-chip .dot{width:7px;height:7px;border-radius:50%;background:#7fe3a6;box-shadow:0 0 0 3px rgba(127,227,166,.25)}
-.posd-chip.is-bad{background:var(--bad)} .posd-chip.is-bad .dot{background:#ffd0d4;box-shadow:0 0 0 3px rgba(255,208,212,.3)}
-.posd-chip.is-warn{background:var(--warn)}
-.posd-meta{display:flex;gap:16px;margin-top:13px;font-size:13px;color:#cdd9ef}
+  padding:5px 11px 5px 9px;border-radius:var(--r-pill);white-space:nowrap;background:var(--ok-bg);color:#0c6b3d;
+  border:1px solid #bce8d2}
+.posd-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(31,170,97,.18)}
+.posd-chip.is-bad{background:var(--bad-bg);color:#b51f30;border-color:#f6c4cb}
+.posd-chip.is-bad .dot{background:var(--bad);box-shadow:0 0 0 3px rgba(226,59,78,.18)}
+.posd-chip.is-warn{background:var(--warn-bg);color:#9a5b00;border-color:#f6dcae}
+.posd-chip.is-warn .dot{background:var(--warn);box-shadow:0 0 0 3px rgba(245,144,23,.18)}
+.posd-meta{display:flex;gap:16px;margin-top:13px;font-size:13px;color:var(--muted)}
 .posd-meta span{display:inline-flex;align-items:center;gap:6px}
-.posd-meta .late.is-bad{color:#ffc3c6;font-weight:700}
+.posd-meta .late.is-bad{color:var(--bad);font-weight:700}
 .posd-x{position:absolute;top:16px;right:16px;width:32px;height:32px;border:none;border-radius:9px;
-  background:rgba(255,255,255,.14);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:background .15s}
-.posd-x:hover{background:rgba(255,255,255,.28)}
-.posd-x:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(255,255,255,.5)}
+  background:var(--soft-2);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s}
+.posd-x:hover{background:var(--line);color:var(--ink)}
+.posd-x:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
 
 /* ===================== BODY ===================== */
 .posd-body{flex:1 1 auto;overflow-y:auto;padding:18px 20px 22px;background:var(--surface)}
 
-/* ----- Đọc nhanh: 3 số quyết định (luôn hiển thị trên tabs) ----- */
-.posd-glance{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
-.posd-stat{background:var(--soft);border:1px solid var(--line);border-radius:var(--r);padding:13px 14px;
-  box-shadow:var(--sh-card)}
-.posd-stat .k{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.01em}
-.posd-stat .v{font-size:26px;font-weight:750;margin-top:6px;font-variant-numeric:tabular-nums;color:var(--navy);
-  letter-spacing:-.02em;line-height:1}
-.posd-stat .v.tone-ok{color:var(--ok)} .posd-stat .v.tone-warn{color:var(--warn)} .posd-stat .v.tone-bad{color:var(--bad)}
-.posd-stat .v.state{font-size:15px;font-weight:700;padding-top:7px;color:var(--ink)}
-.posd-stat .sub{font-size:11px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
-.posd-progress{height:6px;border-radius:4px;background:#e1e9f3;margin-top:10px;overflow:hidden}
-.posd-progress > span{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue),#4f86ff);
-  transition:width .3s var(--ease)}
+/* ----- Đọc nhanh (Hướng C): Trạng thái = headline · progress block gánh Tiến độ + Còn cần SX ----- */
+.posd-glance{background:var(--soft);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--sh-card);padding:15px 16px 14px}
+/* hàng 1: trạng thái tiến độ (headline) + chỉ báo NVL tách riêng */
+.posd-statusrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.posd-status{display:inline-flex;align-items:center;gap:9px;font-size:16px;font-weight:750;color:var(--ink);
+  letter-spacing:-.01em;min-width:0}
+.posd-status .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);
+  box-shadow:0 0 0 3px rgba(31,170,97,.18);flex:0 0 auto}
+.posd-status.is-warn{color:#9a5b00} .posd-status.is-warn .dot{background:var(--warn);box-shadow:0 0 0 3px rgba(245,144,23,.18)}
+.posd-status.is-bad{color:#b51f30} .posd-status.is-bad .dot{background:var(--bad);box-shadow:0 0 0 3px rgba(226,59,78,.18)}
+.posd-nvl{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-pill);padding:5px 11px;
+  white-space:nowrap;flex:0 0 auto}
+.posd-nvl .dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.posd-nvl.is-bad{color:#b51f30;border-color:#f6c4cb;background:var(--bad-bg)} .posd-nvl.is-bad .dot{background:var(--bad)}
+/* hàng 2: progress trục + % to */
+.posd-prog{display:flex;align-items:center;gap:13px;margin-top:15px}
+.posd-progress{flex:1;height:9px;border-radius:5px;background:var(--line-2);overflow:hidden}
+.posd-progress > span{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  transition:width .4s var(--ease)}
+.posd-pct{font-size:24px;font-weight:750;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+  line-height:1;min-width:60px;text-align:right}
+.posd-pct.tone-ok{color:var(--ok)}
+/* hàng 3: caption gánh các con số */
+.posd-caption{margin-top:11px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.posd-caption b{color:var(--ink);font-weight:700}
+.posd-caption .rem{color:var(--accent);font-weight:700}
+/* flash nhẹ khi số cập nhật sau lưu (AG6) */
+.posd-glance.flash{animation:posd-glance-flash 1.2s ease-out}
+@keyframes posd-glance-flash{0%{box-shadow:0 0 0 2px var(--primary-soft),var(--sh-card)}100%{box-shadow:var(--sh-card)}}
 
-.posd-stagestrip{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:13px;padding:12px 14px;
+.posd-stagestrip{display:grid;grid-template-columns:1fr 1fr;gap:11px 18px;margin-top:13px;padding:13px 15px;
   background:var(--soft-2);border-radius:var(--r);font-size:13px}
-.posd-stagestrip .pair{display:flex;flex-direction:column;gap:2px}
-.posd-stagestrip .k{font-size:10.5px;color:var(--label);font-weight:600}
-.posd-stagestrip .vv{font-weight:700;font-variant-numeric:tabular-nums}
+.posd-stagestrip .pair{display:flex;flex-direction:column;gap:3px;min-width:0}
+.posd-stagestrip .k{font-size:10.5px;color:var(--label);font-weight:600;letter-spacing:.02em}
+.posd-stagestrip .vv{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
 .posd-stagestrip .vv.tone-ok{color:var(--ok)} .posd-stagestrip .vv.tone-bad{color:var(--bad)}
 
 /* ===================== TABS (segmented control) ===================== */
 .posd-tabs{position:relative;display:flex;gap:4px;margin:18px 0 16px;padding:4px;background:var(--soft-2);
   border-radius:var(--r-pill);border:1px solid var(--line)}
 .posd-tab-ind{position:absolute;top:4px;left:4px;height:calc(100% - 8px);width:calc(50% - 4px);
-  background:var(--surface);border-radius:var(--r-pill);box-shadow:0 2px 8px rgba(17,38,74,.12);
+  background:var(--surface);border-radius:var(--r-pill);box-shadow:0 2px 8px rgba(20,40,80,.12);
   transition:transform .22s var(--ease)}
 .posd-tab{position:relative;z-index:1;flex:1;border:none;background:none;cursor:pointer;padding:9px 10px;
   font-size:13.5px;font-weight:700;color:var(--muted);border-radius:var(--r-pill);display:inline-flex;
   align-items:center;justify-content:center;gap:7px;transition:color .18s}
-.posd-tab[aria-selected="true"]{color:var(--navy)}
-.posd-tab:focus-visible{outline:none;box-shadow:0 0 0 3px var(--blue-ring)}
-.posd-tab .badge{min-width:19px;height:19px;padding:0 6px;border-radius:var(--r-pill);background:var(--blue);color:#fff;
+.posd-tab[aria-selected="true"]{color:var(--primary)}
+.posd-tab:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
+.posd-tab .badge{min-width:19px;height:19px;padding:0 6px;border-radius:var(--r-pill);background:var(--primary);color:#fff;
   font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
 .posd-tab[aria-selected="false"] .badge{background:#c3cedd;color:#fff}
 
@@ -115,16 +136,16 @@ body{margin:0;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;background:
 /* ===================== FORM (tab Ghi nhận) ===================== */
 .posd-formhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .posd-formhead .ttl{font-size:13px;font-weight:750;color:var(--ink);letter-spacing:-.01em}
-.posd-now{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--blue);font-weight:600;cursor:pointer;
+.posd-now{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--primary);font-weight:600;cursor:pointer;
   user-select:none}
-.posd-now input{width:15px;height:15px;accent-color:var(--blue);cursor:pointer}
+.posd-now input{width:15px;height:15px;accent-color:var(--primary);cursor:pointer}
 
 .posd-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.01em;margin-bottom:6px}
 .posd-row{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:11px}
 .posd-input{width:100%;padding:11px 13px;border:1.4px solid var(--line);border-radius:var(--r-ctl);font-size:15px;
   color:var(--ink);background:var(--surface);font-variant-numeric:tabular-nums;transition:border-color .15s,box-shadow .15s}
-.posd-input::placeholder{color:#9aa6b5}
-.posd-input:focus-visible{outline:none;border-color:var(--blue);box-shadow:0 0 0 3.5px var(--blue-ring)}
+.posd-input::placeholder{color:var(--label)}
+.posd-input:focus-visible{outline:none;border-color:var(--primary);box-shadow:0 0 0 3.5px var(--ring)}
 .posd-input.ro{background:var(--soft-2);color:var(--muted);border-color:var(--line)}
 .posd-input.invalid{border-color:var(--bad);box-shadow:0 0 0 3.5px var(--bad-bg)}
 .posd-err{display:block;min-height:15px;margin-top:5px;font-size:11.5px;color:var(--bad);font-weight:600}
@@ -132,24 +153,24 @@ body{margin:0;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;background:
 .posd-presets{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
 .posd-preset{border:1.4px solid var(--line);background:var(--surface);border-radius:var(--r-pill);padding:7px 13px;
   font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s}
-.posd-preset:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}
-.posd-preset:focus-visible{outline:none;box-shadow:0 0 0 3px var(--blue-ring)}
-.posd-preset[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:#fff}
+.posd-preset:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
+.posd-preset:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
+.posd-preset[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:#fff}
 
-.posd-live{margin-top:13px;padding:12px 14px;border-radius:var(--r-ctl);background:var(--blue-soft);
-  font-size:13px;color:var(--blue-700);display:flex;align-items:center;gap:9px;font-variant-numeric:tabular-nums;
-  border:1px solid #dfe9ff}
-.posd-live.is-warn{background:var(--warn-bg);color:var(--warn);border-color:#f5e2bf}
+.posd-live{margin-top:13px;padding:12px 14px;border-radius:var(--r-ctl);background:var(--primary-soft);
+  font-size:13px;color:var(--primary-700);display:flex;align-items:center;gap:9px;font-variant-numeric:tabular-nums;
+  border:1px solid #cfe6dc}
+.posd-live.is-warn{background:var(--warn-bg);color:var(--warn);border-color:#f6dcae}
 .posd-live b{font-weight:750}
 
 .posd-actions{margin-top:16px}
-.posd-save{width:100%;background:var(--blue-700);color:#fff;border:none;border-radius:var(--r-ctl);font-size:16px;
+.posd-save{width:100%;background:var(--primary);color:#fff;border:none;border-radius:var(--r-ctl);font-size:16px;
   font-weight:700;padding:14px;cursor:pointer;transition:filter .15s,transform .05s,box-shadow .15s;
-  box-shadow:0 8px 20px rgba(27,70,194,.26)}
+  box-shadow:0 8px 20px rgba(21,103,76,.24)}
 .posd-save:hover{filter:brightness(1.07)}
 .posd-save:active{transform:translateY(1px)}
-.posd-save:disabled{background:#aebfd9;box-shadow:none;cursor:not-allowed}
-.posd-save:focus-visible{outline:none;box-shadow:0 0 0 3.5px var(--blue-ring),0 8px 20px rgba(27,70,194,.26)}
+.posd-save:disabled{background:#b7c2cf;box-shadow:none;cursor:not-allowed}
+.posd-save:focus-visible{outline:none;box-shadow:0 0 0 3.5px var(--ring),0 8px 20px rgba(21,103,76,.24)}
 .posd-savehint{display:block;text-align:center;font-size:11px;color:var(--muted);margin-top:8px}
 .posd-savehint kbd{font-family:inherit;font-weight:700;background:var(--soft-2);border:1px solid var(--line);
   border-radius:5px;padding:1px 6px;font-size:11px;color:var(--ink)}
@@ -159,7 +180,7 @@ body{margin:0;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;background:
 .posd-histsum .cell{flex:1;background:var(--soft);border:1px solid var(--line);border-radius:var(--r-ctl);
   padding:11px 13px;box-shadow:var(--sh-card)}
 .posd-histsum .k{font-size:11px;color:var(--muted);font-weight:600}
-.posd-histsum .v{font-size:19px;font-weight:750;margin-top:3px;font-variant-numeric:tabular-nums;color:var(--navy)}
+.posd-histsum .v{font-size:19px;font-weight:750;margin-top:3px;font-variant-numeric:tabular-nums;color:var(--ink)}
 .posd-histsum .v.tone-bad{color:var(--bad)}
 
 .posd-history{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:var(--r);
@@ -189,8 +210,8 @@ body{margin:0;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;background:
 .posd-confirm button{border-radius:var(--r-ctl);padding:10px 17px;font-size:13.5px;font-weight:700;cursor:pointer;
   border:1.4px solid var(--line);background:var(--surface);color:var(--ink);transition:filter .15s,background .15s}
 .posd-confirm button:hover{background:var(--soft)}
-.posd-confirm button:focus-visible{outline:none;box-shadow:0 0 0 3px var(--blue-ring)}
-.posd-confirm button.primary{background:var(--blue-700);border-color:var(--blue-700);color:#fff}
+.posd-confirm button:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
+.posd-confirm button.primary{background:var(--primary);border-color:var(--primary);color:#fff}
 .posd-confirm button.danger{background:var(--bad);border-color:var(--bad);color:#fff}
 .posd-confirm button.primary:hover,.posd-confirm button.danger:hover{filter:brightness(1.07);background:inherit}
 
@@ -233,22 +254,16 @@ body{margin:0;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;background:
 
       <!-- ĐỌC NHANH (context dùng chung cho cả 2 tab) -->
       <section aria-label="Đọc nhanh tình trạng">
-        <div class="posd-glance">
-          <div class="posd-stat">
-            <div class="k">Tiến độ</div>
-            <div class="v" id="gProgress">60%</div>
+        <div class="posd-glance" id="glance">
+          <div class="posd-statusrow">
+            <span class="posd-status" id="gState"><span class="dot"></span>Đúng tiến độ</span>
+            <span class="posd-nvl" id="gNvl" title="Tình trạng nguyên vật liệu"><span class="dot"></span>NVL đủ</span>
+          </div>
+          <div class="posd-prog">
             <div class="posd-progress"><span id="gProgressBar" style="width:60%"></span></div>
+            <span class="posd-pct" id="gProgress">60%</span>
           </div>
-          <div class="posd-stat">
-            <div class="k">Còn cần SX</div>
-            <div class="v" id="gRemain">1.200</div>
-            <div class="sub">/ KH 3.000</div>
-          </div>
-          <div class="posd-stat">
-            <div class="k">Trạng thái</div>
-            <div class="v state" id="gState">Đúng tiến độ</div>
-            <div class="sub" id="gStateSub">NVL đủ</div>
-          </div>
+          <div class="posd-caption">Đã SX <b id="gDone">1.800</b> · còn <b class="rem" id="gRemain">1.200</b> / KH <b>3.000</b></div>
         </div>
         <div class="posd-stagestrip">
           <div class="pair"><span class="k">Công đoạn · Tổ</span><span class="vv">Mixing · Team 2</span></div>
@@ -426,6 +441,7 @@ body{margin:0;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;background:
       "</td><td class='num lk'>"+fmt(accum)+"</td><td class='who'>"+person+"</td>";
     tb.insertBefore(tr,tb.firstChild);
     refreshHeader();
+    var gl=$("glance"); gl.classList.remove("flash"); void gl.offsetWidth; gl.classList.add("flash");
     fTP.value="";fPP.value="";fNote.value="";
     document.querySelectorAll(".posd-preset").forEach(function(b){b.setAttribute("aria-pressed","false");});
     dirty=false; validate(); fTP.focus();
@@ -433,7 +449,7 @@ body{margin:0;font-family:"Inter","Segoe UI",Roboto,Arial,sans-serif;background:
   function refreshHeader(){
     var remain=Math.max(0,PLAN-accum), prog=Math.round(accum/PLAN*100);
     $("gProgress").textContent=prog+"%"; $("gProgressBar").style.width=Math.min(100,prog)+"%";
-    $("gRemain").textContent=fmt(remain);
+    $("gRemain").textContent=fmt(remain); $("gDone").textContent=fmt(accum);
     $("sOk").textContent=fmt(accum); $("sDeliver").textContent=fmt(accum); $("sScrap").textContent=fmt(scrapTotal);
     var gp=$("gProgress"); gp.classList.remove("tone-ok","tone-warn"); if(prog>=100)gp.classList.add("tone-ok");
     var rate=scrapTotal/Math.max(1,accum+scrapTotal); $("sScrap").classList.toggle("tone-bad",rate>SCRAP_WARN);
