@@ -49,6 +49,12 @@ classic code** — the classic dhtmlx path is otherwise byte-for-byte unchanged.
   contract traps it encodes: `material_short` must be a JSON **number** (1) not the string `"false"` (the
   renderer uses truthiness, so `"false"` reads as truthy); and `JSON_ARRAYAGG`/`JSON_OBJECT` use
   `RETURNING CLOB` to survive the 4000-char limit. Needs Oracle 12.2+ (`ABSENT ON NULL`).
+- `real-data-query.sql` — the **production** region SQL: the same JSON contract built from the real MES
+  tables (`wip_logs`/`wip_log_details`/`wip_job_*`/`inventory_items`/`order_headers`/`departments`).
+  Locked mapping: **machine = `departments`** (`dep.dep_id = wjs.dep_id`) → stage(`wjs`)→machine(`dep`)→po(`batch_no`).
+  The real data has **only `finish_date_expected` (no start time)**, so every PO spans the **whole day**
+  (`start_date` = `TRUNC(day)` 00:00, `duration` = 23+59/60 h = 23:59) — do not expect truthful sub-day
+  bars until a real start column exists. Same `RETURNING CLOB` / number-`material_short` traps as the mock.
 
 **Mode:** the plugin runs `ganttOnly: true` — it renders **only the Gantt grid (`.g-scroll`)**. The Header
 KPIs, Production Health sidebar, and the day picker are built separately as native APEX components. The
@@ -100,13 +106,40 @@ components, so their conventions differ from the renderer:
   not completion). KPI `Performance` metrics are neutral unless `is-warn`/`is-crit`; status is a consistent
   dot indicator + `⚠` on the worst metric, with the target threshold in a hover `title`.
 
+**Shipped native-APEX build of the chrome.** The two chrome pieces are now deployable (not just prototyped),
+each as a trio in `sources/`: **query + PL/SQL Dynamic Content region + extracted CSS**.
+- **Production Health sidebar:** `stage-health-query.sql` (raw columns), `stage-health-dynamic-content.sql`
+  (region), `stage-health.css`. Completion % = `SUM(actual)/SUM(plan)` grouped at (stage, job-line) grain
+  first so `wjl.quantity` is not fan-trap-multiplied. (Note: this build colors by **completion**, per an
+  explicit user override of the locked load-coloring rule above.)
+- **Header KPI strip:** `header-kpi-query.sql` (one row), `header-kpi-dynamic-content.sql` (region),
+  `header-kpi.css` (also styles the native `a-date-picker` item `P200416102_TIME`). Locked KPI formulas:
+  **OK Qty** = `SUM(wld.quantity WHERE finish_flag='Y')`, **Scrap** = `SUM(wld.quantity WHERE problem_flag='Y')`,
+  **Target** = `SUM(DISTINCT wjl.quantity)` (fan-trap guard), **ORDERS** = `COUNT(DISTINCT order_number)`.
+  `Yield%`=OK/(OK+Scrap); `OEE%`=`FCST%`=OK/Target (kept as two tiles despite being equal until a real
+  rate×time standard exists). Threshold coloring: `v≥target` ok · `target-2≤v<target` warn · else crit
+  (Yield 98 / OEE 85 / SA 95 / FCST 95). Three **data debts** encoded as placeholders: `SA%`=NULL→`—`
+  (no real completion time), and `Running`/`Delayed` are **proxies** (Running = order with `0<OK<Target`;
+  Delayed = order with `problem_flag='Y'`) — swap when real run status / planned-end time land.
+
+**Two hard gotchas when shipping these regions to APEX** (both cost a debugging cycle here):
+1. On this page a **PL/SQL Dynamic Content region is wrapped as a FUNCTION that must `RETURN`** — building
+   HTML with `htp.p` throws `ORA-06503: Function returned without value`. Build a `CLOB` and `RETURN` it.
+2. The class tokens (`--text`, `--danger`, …) are declared on the **`.mes-sidebar`/`.mes-header` wrapper**,
+   whose CSS lives only in the prototypes — you must (a) copy the extracted `.css` into the page and
+   (b) set the region's **CSS Classes = `mes-sidebar`/`mes-header`** so the tokens cascade, or every
+   `var(--…)` resolves empty and the UI renders unstyled.
+
 ### Data contract (`gantt-ux-research/07-data-contract.md`)
 
 Region SQL returns one CLOB of JSON `{ "data": [...], "links": [] }`. Rows are hierarchical via
 `row_type` + `id`/`parent`:
 - `stage` (công đoạn) → `machine` (tổ máy) → `po` (lệnh sản xuất).
-- Time axis is fixed 00:00–24:00 of the selected day; `end = start_date + duration × durationUnit`
-  (`durationUnit` default `"hour"`, configurable). POs outside the day are clipped.
+- The **real SQL data contract is single-day**: rows describe one selected day, `end = start_date +
+  duration × durationUnit` (`durationUnit` default `"hour"`, configurable). POs outside the current view
+  window are clipped. (The renderer's zoom control can widen the *view* to week/month client-side — see
+  the time-scale zoom section — but that currently runs on **mock multi-day data in the harness only**;
+  the SQL contract has not been extended to return multiple days.)
 
 ### Key rendering rules (encoded in the renderer, reflect locked UX decisions)
 
@@ -116,6 +149,33 @@ Region SQL returns one CLOB of JSON `{ "data": [...], "links": [] }`. Rows are h
   20–70px shows only the % (centered); <20px becomes a `marker` chip (status color only). All detail is in
   the hover popover. The timeline stays truthful to time — only markers get an enforced min-width.
 - Status color lives on the machine-row dot; the stage-efficiency badge stays neutral.
+
+### Time-scale zoom control (`.zoomctl` in `mes-control-tower.js`)
+
+A neutral `[ − ][ level label ][ + ]` pill at the **top-right of the Gantt** zooms the time axis through a
+**6-level ladder** (`ZOOM[]`, index 0 = most zoomed-in, `+` disabled; index 5 = most zoomed-out, `−`
+disabled): **L0 "1 giờ"** → **L1 "2 giờ" (default, == the original view)** → **L2 "4 giờ"** → **L3 "12 giờ"**
+→ **L4 "Tuần"** → **L5 "Tháng"**. `+` = zoom in (finer/index−−), `−` = zoom out (wider/index++); also bound
+to keyboard `+`/`=` and `−`/`_` (ignored while typing in a field). Locked scope: finest is **1 hour** (never
+sub-hour); `+` locks once at the fullest single-day detail, `−` locks at Tháng.
+
+Architecture — `computeView(dayStr, z)` returns `{start, ms, ticks, grids, multi, gridPx}` and render uses a
+generalized window `[dayStart, dayEnd]` (no longer a hardcoded 24h clip):
+- **L0–L3** keep the single-day data; only tick *density* and timeline *width* change.
+- **L4–L5** switch to a multi-day axis (Tuần = Mon–Sun containing the selected day; Tháng = 1st→last),
+  one column per day, PO bars laid out by absolute datetime across days.
+- **Bars scale with time (co-giãn):** each level carries `pxH` (px/hour) or `pxD` (px/day) → `gridPx` =
+  timeline width, applied as `P.el.grid.style.minWidth`. Bars are `%`-positioned within the lane, so they
+  stretch/compress with `gridPx` and the grid **scrolls horizontally** when wider than the viewport.
+  `min-width` (not `width`) means levels narrower than the viewport fill it (no right-hand whitespace), so
+  the stretch is most visible zooming **in** (1 giờ) and in Tuần/Tháng. Default L1 `gridPx`=880 (unchanged
+  from the pre-zoom view). Multi-day labels are centered per column via `.tick.lab` (see the CSS override
+  after the `:first-child`/`:last-child` axis rules).
+
+Control stays **neutral** (exception-driven color rule — no semantic colors), matches `.daynav` tokens, and
+lives in both shell branches (floating `.g-toolbar.zoombar` in `ganttOnly`, appended to the toolbar
+otherwise). The harness seeds extra multi-day mock POs (P6–P11 on adjacent June-2025 days) purely to
+exercise Tuần/Tháng.
 
 ### PO interaction events
 
