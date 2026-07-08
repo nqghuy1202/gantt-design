@@ -55,11 +55,27 @@ classic code** — the classic dhtmlx path is otherwise byte-for-byte unchanged.
   The real data has **only `finish_date_expected` (no start time)**, so every PO spans the **whole day**
   (`start_date` = `TRUNC(day)` 00:00, `duration` = 23+59/60 h = 23:59) — do not expect truthful sub-day
   bars until a real start column exists. Same `RETURNING CLOB` / number-`material_short` traps as the mock.
+  Day bind reads the native time item: `TO_DATE(SUBSTR(:P200416102_TIME,1,10),'DD-MM-YYYY')` — that item
+  holds `DD-MM-YYYY HH24:MI - HH24:MI`, so it must be **substring'd to the first 10 chars** (passing the whole
+  string to `TO_DATE` throws ORA-01843/01861). Returns `wjh_id`/`wlo_id`/`wjs_id` for the renderer's PO-click
+  keys: real values only in `po_rows`; at the `machine`/`stage` grain (GROUP BY over many POs) `wjh_id`/`wlo_id`
+  **must be `CAST(NULL AS NUMBER)`** — selecting `b.wjh_id`/`b.wlo_id` there throws **ORA-00979 (not a GROUP BY
+  expression)**. `wjs_id` survives because it is in every GROUP BY. (`ABSENT ON NULL` then omits the null keys
+  on non-PO rows.)
 
 **Mode:** the plugin runs `ganttOnly: true` — it renders **only the Gantt grid (`.g-scroll`)**. The Header
 KPIs, Production Health sidebar, and the day picker are built separately as native APEX components. The
 selected day comes from a page item (`dateItem`, e.g. `P1_NGAY`); a Dynamic Action refreshes the region
 on change.
+
+**Changing the day needs the item wired in TWO places** (a debugging trap: query returns the new day but the
+grid renders empty). (1) The region's **Page Items to Submit** (`ajax_items_to_submit`) must include the date
+item — that becomes the `pageItems` sent with the AJAX call, which refreshes Oracle **session state** so the
+region SQL's `:P…_TIME` bind sees the new date. (2) Plugin **attribute 16 (Date Page Item / `dateItem`)** must
+also point at the same item — it only drives the **client-side** time axis via `selectedDateStr()`
+(`mes-control-tower.js` ~L38-44). Miss (2) and the query returns the new day's POs but the axis stays on the
+old day, so every bar falls outside `[dayStart, dayEnd]` and is clipped (~L259-266, L304) → blank grid. Attr 16
+does **not** submit to the server; the two channels are independent.
 
 **Time-window context control.** Beyond a plain day, the screen lets the user pick **one day + a start/end
 time** (e.g. `25-06-2026 07:00 - 10:00`) — APEX's native `a-date-picker` holds a single value and cannot do
@@ -149,6 +165,17 @@ Region SQL returns one CLOB of JSON `{ "data": [...], "links": [] }`. Rows are h
   20–70px shows only the % (centered); <20px becomes a `marker` chip (status color only). All detail is in
   the hover popover. The timeline stays truthful to time — only markers get an enforced min-width.
 - Status color lives on the machine-row dot; the stage-efficiency badge stays neutral.
+- **Single-machine stage collapse (`solo` rows).** When a stage has exactly **one** machine (the real MES
+  case — every PO sits in the same department PSX, so `stage → machine` is a degenerate 1:1 that otherwise
+  renders "PSX" as a repeated row under every công đoạn), the renderer **drops the stage header row** and
+  merges it into the machine row: `mList = machines.filter(parent===s.id)`; skip the `.g-row.group` header
+  when `mList.length===1`, tag that machine row `solo`, and label it `"<stage.text> · <machine.text>"`. The
+  merge/label is done **in the renderer, not the SQL** (so mock and real data both work — SQL merging would
+  double-print or blank the stage name in the harness). CSS `.g-row.solo .g-name`/`.solo .mac` make it read
+  as a group header. Multi-machine stages keep the original two-tier layout untouched. Trade-off: the
+  "Hiệu suất X%" badge is not shown on `solo` rows (still available in the Production Health sidebar).
+  The `.mac` label uses `white-space:normal; overflow-wrap:anywhere` so long merged names wrap inside the
+  280px name column instead of truncating.
 
 ### Time-scale zoom control (`.zoomctl` in `mes-control-tower.js`)
 
@@ -182,10 +209,15 @@ exercise Tuần/Tháng.
 - **Hover** any `.po` bar → detail popover (`showPop`/`bindPop` in `mes-control-tower.js`).
 - **Click** a `.po` bar → the renderer emits `data-id` (rendered from `p.id`, so the region SQL **must
   return an `id` for `row_type='po'`**), sets `P.selectedId`, triggers the APEX event
-  **`mesgantt_po_click`** on `#<regionId>` with detail `{id, code, order, data}`, and calls the optional
-  `onPoClick(id, dataset, el)` config callback. Catch it in APEX via a Dynamic Action (Custom event
-  `mesgantt_po_click`, Selection = the MES region) reading `this.data.id`. (Classic dhtmlx mode instead
+  **`mesgantt_po_click`** on `#<regionId>` with detail `{id, wlo, wjh, wjs, code, order, data}`, and calls
+  the optional `onPoClick(id, dataset, el)` config callback. Catch it in APEX via a Dynamic Action (Custom
+  event `mesgantt_po_click`, Selection = the MES region) reading `this.data.id`. (Classic dhtmlx mode instead
   uses `onTaskDblClick` → event `dhtmlxgantt_task_double_click`.)
+- **Real MES keys on the bar:** the renderer also stamps `data-wlo`/`data-wjh`/`data-wjs` from
+  `p.wlo_id`/`p.wjh_id`/`p.wjs_id`, `console.log`s them on click, and exposes them at `this.data.{wlo,wjh,wjs}`
+  (also in `this.data.data`). This requires the region SQL to **return those keys for `row_type='po'`** — add
+  the columns through `base`→`po_rows`→`JSON_OBJECT`, and give `mac_rows`/`stg_rows` a `CAST(NULL AS NUMBER)`
+  **at the identical column position** or the `UNION ALL` throws ORA-01790 (type mismatch) / ORA-00979.
 
 ### PO detail drawer (the `onPoClick` consumer)
 
